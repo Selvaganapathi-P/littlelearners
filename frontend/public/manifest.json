@@ -1,0 +1,20 @@
+{
+  "name": "LittleLearners — Learn, Play & Grow",
+  "short_name": "LittleLearners",
+  "description": "India's joyful preschool learning platform for LKG & UKG children",
+  "start_url": "/dashboard?grade=LKG",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FF6B9D",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "kids"],
+  "lang": "en-IN"
+}

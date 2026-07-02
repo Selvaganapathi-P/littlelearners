@@ -29,6 +29,8 @@ export default function PlaylistPage() {
 
   if (!playlist) return null;
 
+  const firstLesson = playlist.lessons[0];
+
   return (
     <div className="min-h-screen bg-yellow-50">
       {/* Header */}
@@ -38,13 +40,22 @@ export default function PlaylistPage() {
         </button>
         <div className="text-5xl mb-3">📋</div>
         <h1 className="text-3xl mb-1">{playlist.title}</h1>
-        <p className="text-white/80 font-body text-sm">{playlist.lessons.length} videos</p>
+        <p className="text-white/80 font-body text-sm mb-6">{playlist.lessons.length} videos</p>
+
+        {firstLesson && (
+          <Link
+            href={`/watch/${firstLesson._id}?playlist=${id}&idx=0`}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-brand-pink rounded-2xl font-bold text-sm hover:bg-white/90 transition-colors shadow-md"
+          >
+            ▶ Play All
+          </Link>
+        )}
       </div>
 
       {/* Lesson list */}
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-3">
         {playlist.lessons.map((lesson, index) => (
-          <Link key={lesson._id} href={`/watch/${lesson._id}`}>
+          <Link key={lesson._id} href={`/watch/${lesson._id}?playlist=${id}&idx=${index}`}>
             <div className="bg-white rounded-3xl p-4 card-shadow hover:scale-[1.02] transition-transform flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-pink-50 flex-shrink-0">
                 {VIDEO_FORMAT_ICONS[lesson.videoFormat]}

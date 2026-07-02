@@ -24,11 +24,24 @@ router.post('/', protect, founderOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/:id', protect, staffOrAbove, async (req, res, next) => {
+router.put('/:id', protect, founderOnly, async (req, res, next) => {
   try {
-    const school = await School.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const allowed = {};
+    const fields = ['name', 'contactEmail', 'city', 'state', 'plan', 'region', 'gradeLevels'];
+    for (const f of fields) if (req.body[f] !== undefined) allowed[f] = req.body[f];
+    const school = await School.findByIdAndUpdate(req.params.id, allowed, { new: true, runValidators: true });
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
     res.json({ success: true, data: school });
+  } catch (err) { next(err); }
+});
+
+router.patch('/:id/toggle-active', protect, founderOnly, async (req, res, next) => {
+  try {
+    const school = await School.findById(req.params.id);
+    if (!school) return res.status(404).json({ success: false, message: 'School not found' });
+    school.active = !school.active;
+    await school.save();
+    res.json({ success: true, data: { id: school._id, active: school.active } });
   } catch (err) { next(err); }
 });
 

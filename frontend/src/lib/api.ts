@@ -33,7 +33,14 @@ export const api = {
 // Auth helpers
 export const authApi = {
   login: (email: string, password: string) => api.post<{ success: boolean; token: string; user: { id: string; name: string; email: string; role: string } }>('/auth/login', { email, password }),
+  register: (name: string, email: string, password: string, role = 'parent') =>
+    api.post<{ success: boolean; token: string; user: { id: string; name: string; email: string; role: string } }>('/auth/register', { name, email, password, role }),
+  forgotPassword: (email: string) =>
+    api.post<{ success: boolean; message: string; resetUrl?: string }>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) =>
+    api.post<{ success: boolean; token: string; user: { id: string; name: string; email: string; role: string } }>('/auth/reset-password', { token, password }),
   me: () => api.get('/auth/me'),
+  toggleUserActive: (id: string) => api.patch<{ success: boolean; data: { id: string; active: boolean } }>(`/auth/users/${id}/toggle-active`),
 };
 
 // Lessons
@@ -47,13 +54,35 @@ export const lessonsApi = {
   create: (body: unknown) => api.post('/lessons', body),
   update: (id: string, body: unknown) => api.put(`/lessons/${id}`, body),
   publish: (id: string) => api.patch(`/lessons/${id}/publish`),
+  unpublish: (id: string) => api.patch(`/lessons/${id}/unpublish`),
+  clone: (id: string) => api.post(`/lessons/${id}/clone`, {}),
+  bulkAction: (ids: string[], action: 'publish' | 'archive') => api.post('/lessons/bulk', { ids, action }),
   formats: () => api.get('/lessons/formats'),
+  stats: () => api.get('/lessons/stats'),
+  tags: () => api.get('/lessons/tags'),
+  generateScript: (id: string) =>
+    api.post<{ success: boolean; data: { scriptText: string } }>(`/lessons/${id}/generate-script`, {}),
+};
+
+// Schools
+export const schoolsApi = {
+  list: () => api.get('/schools'),
+  create: (body: { name: string; contactEmail: string; city?: string; state?: string; plan?: string }) =>
+    api.post('/schools', body),
+  update: (id: string, body: { name?: string; contactEmail?: string; city?: string; state?: string; plan?: string; region?: string }) =>
+    api.put(`/schools/${id}`, body),
+  toggleActive: (id: string) => api.patch(`/schools/${id}/toggle-active`),
 };
 
 // Compilations
 export const compilationsApi = {
   list: (grade?: string) => api.get(`/compilations${grade ? `?grade=${grade}` : ''}`),
+  listAll: () => api.get('/compilations?all=true'),
   get: (id: string) => api.get(`/compilations/${id}`),
+  create: (body: unknown) => api.post('/compilations', body),
+  update: (id: string, body: unknown) => api.put(`/compilations/${id}`, body),
+  togglePublish: (id: string) => api.patch(`/compilations/${id}/publish`),
+  delete: (id: string) => api.delete(`/compilations/${id}`),
   autoGenerate: () => api.post('/compilations/auto-generate', {}),
 };
 
@@ -66,8 +95,26 @@ export const calendarApi = {
   list: (region?: string) => api.get(`/calendar${region ? `?region=${region}` : ''}`),
 };
 
+// Subjects
+export const subjectsApi = {
+  list: (grade?: string) => api.get(`/subjects${grade ? `?grade=${grade}` : ''}`),
+};
+
+// Children
+export const childrenApi = {
+  list: (grade?: string) => api.get(`/children${grade ? `?grade=${grade}` : ''}`),
+  mine: () => api.get('/children/mine'),
+  get: (id: string) => api.get(`/children/${id}`),
+  create: (body: { name: string; grade: string; avatar: string }) => api.post('/children', body),
+  update: (id: string, body: { name?: string; avatar?: string }) => api.patch(`/children/${id}`, body),
+  claim: (id: string) => api.post(`/children/${id}/claim`, {}),
+  recordWatch: (childId: string, lessonId: string, completedPercent: number) =>
+    api.patch(`/children/${childId}/watch`, { lessonId, completedPercent }),
+};
+
 // Video generation
 export const videoApi = {
   generate: (lessonId: string) => api.post(`/video/generate/${lessonId}`, {}),
+  simulate: (lessonId: string) => api.post(`/video/simulate/${lessonId}`, {}),
   templates: () => api.get('/video/formats/templates'),
 };

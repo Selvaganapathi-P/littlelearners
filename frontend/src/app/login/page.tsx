@@ -23,6 +23,7 @@ export default function LoginPage() {
       login(res.token, res.user as User);
       if (res.user.role === 'founder') router.push('/founder');
       else if (['admin', 'staff'].includes(res.user.role)) router.push('/studio');
+      else if (res.user.role === 'parent') router.push('/parent');
       else router.push('/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -79,11 +80,18 @@ export default function LoginPage() {
           >
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
+          <p className="text-center text-sm text-gray-400 font-body">
+            <a href="/forgot-password" className="text-brand-pink hover:underline">Forgot password?</a>
+          </p>
         </form>
 
         <p className="text-center text-sm text-gray-400 mt-6 font-body">
           Children&apos;s access →{' '}
           <a href="/" className="text-brand-pink hover:underline">Home</a>
+        </p>
+        <p className="text-center text-sm text-gray-400 mt-2 font-body">
+          New parent?{' '}
+          <a href="/register" className="text-brand-purple hover:underline font-semibold">Create account</a>
         </p>
       </div>
     </div>

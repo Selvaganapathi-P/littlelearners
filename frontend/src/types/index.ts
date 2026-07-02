@@ -72,9 +72,9 @@ export interface Child {
   badges: Array<{ name: string; earnedAt: string; videoFormat: VideoFormat }>;
   streaks: { current: number; longest: number; lastActivityDate?: string };
   watchHistory: Array<{
-    lesson: string | { _id: string; title?: string };
-    watchedAt?: string;
-    completedPercent?: number;
+    lesson: string | { _id: string; title?: string; videoFormat?: string; thumbnailUrl?: string };
+    watchedAt: string;
+    completedPercent: number;
   }>;
 }
 

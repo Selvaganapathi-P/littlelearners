@@ -6,10 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/studio',        label: 'Create',   icon: '✏️' },
-  { href: '/studio/lessons',label: 'Lessons',  icon: '🎬' },
-  { href: '/calendar',      label: 'Calendar', icon: '📅' },
-  { href: '/dashboard?grade=LKG', label: 'Preview', icon: '👁️' },
+  { href: '/studio',              label: 'Create',     icon: '✏️',  exact: true },
+  { href: '/studio/lessons',      label: 'Lessons',    icon: '🎬', exact: false },
+  { href: '/studio/compilations', label: 'Playlists',  icon: '📋', exact: false },
+  { href: '/calendar',            label: 'Calendar',   icon: '📅', exact: false },
+  { href: '/dashboard?grade=LKG', label: 'Preview',    icon: '👁️', exact: false },
 ];
 
 export function StaffNav() {
@@ -27,18 +28,22 @@ export function StaffNav() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <Link href="/" className="text-xl text-brand-pink font-display mr-4">LL</Link>
-          {NAV_ITEMS.map(item => (
+          {NAV_ITEMS.map(item => {
+            const basePath = item.href.split('?')[0];
+            const isActive = item.exact
+              ? pathname === basePath
+              : pathname === basePath || pathname.startsWith(basePath + '/');
+            return (
             <Link key={item.href} href={item.href}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors',
-                pathname === item.href || pathname.startsWith(item.href + '/')
-                  ? 'bg-pink-50 text-brand-pink'
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                isActive ? 'bg-pink-50 text-brand-pink' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
               )}>
               <span className="text-base">{item.icon}</span>
               <span className="hidden sm:inline">{item.label}</span>
             </Link>
-          ))}
+            );
+          })}
         </div>
         <div className="flex items-center gap-3">
           {user?.role === 'founder' && (

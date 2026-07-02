@@ -1,0 +1,15 @@
+# Railway/Nixpacks config — installs Chromium for Remotion renderer
+# NOTE: Add a Railway Volume mounted at /app/uploads for video persistence across deploys
+# (Railway dashboard → your service → Storage → Add Volume → mount path: /app/uploads)
+[phases.setup]
+nixPkgs = ["chromium", "nss", "freetype", "harfbuzz", "ca-certificates", "ttf-font-awesome"]
+
+[phases.build]
+cmds = ["npm install"]
+
+[start]
+cmd = "node server.js"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/run/current-system/sw/bin/chromium"

@@ -34,6 +34,10 @@ const childSchema = new mongoose.Schema({
     watchedAt: Date,
     completedPercent: Number,
   }],
+  parentUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   pin: {
     type: String,
     select: false,

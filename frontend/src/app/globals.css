@@ -27,10 +27,9 @@ h1, h2, h3 {
   font-family: var(--font-fredoka);
 }
 
-/* Child-safe: no tiny tap targets */
-button, a {
+/* Child-safe: generous tap targets on child-facing pages */
+button {
   min-height: 44px;
-  min-width: 44px;
 }
 
 @layer utilities {
@@ -43,4 +42,19 @@ button, a {
   .card-shadow-sm {
     box-shadow: 0 2px 0 0 rgba(0,0,0,0.10);
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .toast-slide-in {
+    animation: toastSlideIn 0.25s ease-out;
+  }
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateX(calc(100% + 1.5rem)); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }

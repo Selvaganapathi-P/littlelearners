@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -31,6 +32,9 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// Serve locally rendered videos and thumbnails (fallback when Cloudinary not configured)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/grades', require('./src/routes/grades'));
@@ -47,4 +51,9 @@ app.get('/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`LittleLearners API running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`LittleLearners API running on port ${PORT}`);
+  // Pre-warm Remotion bundle + browser so first render isn't slow
+  const { warmUp } = require('./src/services/videoRenderer');
+  warmUp();
+});

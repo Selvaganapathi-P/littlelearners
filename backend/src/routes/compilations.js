@@ -1,14 +1,25 @@
 const router = require('express').Router();
+const jwt = require('jsonwebtoken');
 const ThemedCompilation = require('../models/ThemedCompilation');
 const Lesson = require('../models/Lesson');
 const { protect, staffOrAbove } = require('../middleware/auth');
 
-router.get('/', async (req, res, next) => {
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return next();
+  try { req.user = jwt.verify(token, process.env.JWT_SECRET); } catch { /* ignore */ }
+  next();
+}
+
+router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const { grade } = req.query;
-    const filter = { published: true };
+    const { grade, all } = req.query;
+    const isStaff = req.user && ['staff', 'admin', 'founder'].includes(req.user.role);
+    const filter = (all === 'true' && isStaff) ? {} : { published: true };
     if (grade) filter.grade = { $in: [grade, 'both'] };
-    const compilations = await ThemedCompilation.find(filter).populate('lessons', 'title videoFormat thumbnailUrl durationSeconds');
+    const compilations = await ThemedCompilation.find(filter)
+      .populate('lessons', 'title videoFormat thumbnailUrl durationSeconds')
+      .sort({ createdAt: -1 });
     res.json({ success: true, data: compilations });
   } catch (err) { next(err); }
 });
@@ -54,6 +65,23 @@ router.post('/auto-generate', protect, staffOrAbove, async (req, res, next) => {
       }
     }
     res.json({ success: true, created: created.length, data: created });
+  } catch (err) { next(err); }
+});
+
+router.patch('/:id/publish', protect, staffOrAbove, async (req, res, next) => {
+  try {
+    const comp = await ThemedCompilation.findById(req.params.id);
+    if (!comp) return res.status(404).json({ success: false, message: 'Compilation not found' });
+    comp.published = !comp.published;
+    await comp.save();
+    res.json({ success: true, data: comp });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id', protect, staffOrAbove, async (req, res, next) => {
+  try {
+    await ThemedCompilation.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Compilation deleted' });
   } catch (err) { next(err); }
 });
 

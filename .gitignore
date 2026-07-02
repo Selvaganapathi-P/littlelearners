@@ -17,6 +17,10 @@ frontend/out/
 dist/
 build/
 
+# Remotion rendered output (served via Express static — not committed)
+backend/uploads/videos/
+backend/uploads/thumbs/
+
 # OS
 .DS_Store
 Thumbs.db
