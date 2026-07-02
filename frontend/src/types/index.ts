@@ -71,6 +71,11 @@ export interface Child {
   avatar: string;
   badges: Array<{ name: string; earnedAt: string; videoFormat: VideoFormat }>;
   streaks: { current: number; longest: number; lastActivityDate?: string };
+  watchHistory: Array<{
+    lesson: string | { _id: string; title?: string };
+    watchedAt?: string;
+    completedPercent?: number;
+  }>;
 }
 
 export interface User {

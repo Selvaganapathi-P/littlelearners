@@ -39,7 +39,8 @@ export const authApi = {
 // Lessons
 export const lessonsApi = {
   list: (params?: Record<string, string>) => {
-    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    const cleaned = params ? Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '')) : {};
+    const qs = Object.keys(cleaned).length ? '?' + new URLSearchParams(cleaned).toString() : '';
     return api.get(`/lessons${qs}`);
   },
   get: (id: string) => api.get(`/lessons/${id}`),

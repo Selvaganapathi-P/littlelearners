@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback((newToken: string, newUser: User) => {
     localStorage.setItem('ll_token', newToken);
     localStorage.setItem('ll_user', JSON.stringify(newUser));
+    // Also set cookie so Next.js middleware can read it (edge runtime)
+    document.cookie = `ll_token=${newToken}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('ll_token');
     localStorage.removeItem('ll_user');
+    document.cookie = 'll_token=; path=/; max-age=0';
     setToken(null);
     setUser(null);
   }, []);
