@@ -20,7 +20,7 @@ const FORMAT_TEMPLATES = {
   themed_compilation:{ sceneDuration: 0, musicStyle: 'playlist',         pacing: 'auto',      textHighlight: false },
 };
 
-// POST /video/generate/:lessonId — trigger Remotion render pipeline
+// POST /video/generate/:lessonId — trigger Google Veo video generation
 router.post('/generate/:lessonId', protect, staffOrAbove, async (req, res, next) => {
   try {
     const lesson = await Lesson.findById(req.params.lessonId);

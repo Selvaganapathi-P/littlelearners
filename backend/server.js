@@ -59,7 +59,6 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`LittleLearners API running on port ${PORT}`);
-  // Pre-warm Remotion bundle + browser so first render isn't slow
   const { warmUp } = require('./src/services/videoRenderer');
   warmUp();
 });
