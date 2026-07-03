@@ -473,7 +473,8 @@ export function MemoryGame({ activity, onDone }: { activity: Activity; onDone: (
 export function SpellGame({ activity, onDone }: { activity: Activity; onDone: () => void }) {
   const spellWords = activity.content.spellWords ?? [];
   const pairs      = activity.content.pairs ?? [];
-  const words      = spellWords.length ? spellWords : pairs.slice(0,5).map(p=>({word:p.word,emoji:p.emoji}));
+  const words: { word: string; emoji: string; hint?: string }[] =
+    spellWords.length ? spellWords : pairs.slice(0,5).map(p=>({word:p.word,emoji:p.emoji}));
 
   const [idx, setIdx]     = useState(0);
   const [letters, setLetters] = useState<string[]>([]);
@@ -574,8 +575,8 @@ export function SpellGame({ activity, onDone }: { activity: Activity; onDone: ()
         {correct && (
           <motion.div initial={{scale:0,opacity:0}} animate={{scale:1,opacity:1}} className="absolute -top-2 left-1/2 -translate-x-1/2 text-green-600 font-black text-lg">✅ Correct!</motion.div>
         )}
-        {'hint' in current && current.hint && (
-          <p className="text-xs text-gray-400 italic mt-1">{(current as {hint?:string}).hint}</p>
+        {current.hint && (
+          <p className="text-xs text-gray-400 italic mt-1">{current.hint}</p>
         )}
       </div>
 
