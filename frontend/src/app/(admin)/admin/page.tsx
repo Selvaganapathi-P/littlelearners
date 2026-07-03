@@ -242,7 +242,7 @@ export default function AdminPage() {
             {user.name}
           </span>
           <button
-            onClick={() => { logout(); router.push('/admin-login'); }}
+            onClick={() => { logout(); router.push('/'); }}
             className="text-xs font-semibold text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-all">
             Sign out
           </button>
@@ -463,6 +463,7 @@ export default function AdminPage() {
                         >
                           <option value="staff">Staff</option>
                           <option value="admin">Admin</option>
+                          <option value="parent">Parent</option>
                         </select>
                         <button type="submit" disabled={creatingUser}
                           className="px-5 py-2.5 bg-brand-purple text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
