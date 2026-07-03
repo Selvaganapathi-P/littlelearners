@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api, authApi, schoolsApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS } from '@/types';
 import type { VideoFormat } from '@/types';
@@ -41,8 +44,6 @@ export default function FounderPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authed, setAuthed] = useState(false);
-  const [pin, setPin] = useState('');
   const [tab, setTab] = useState<'analytics' | 'users' | 'schools' | 'system'>('analytics');
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'staff' });
   const [creatingUser, setCreatingUser] = useState(false);
@@ -54,6 +55,8 @@ export default function FounderPage() {
   const [savingSchool, setSavingSchool] = useState(false);
   const [togglingSchool, setTogglingSchool] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   function openEditSchool(school: SchoolRecord) {
     setEditingSchool(school);
@@ -141,15 +144,9 @@ export default function FounderPage() {
     }
   }
 
-  const handleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('ll_token') : null;
-    if (token || pin === 'founder') setAuthed(true);
-    else toast('Invalid credentials', 'error');
-  };
-
   useEffect(() => {
-    if (!authed) return;
+    if (!user) { router.replace('/admin-login'); return; }
+    if (!['admin', 'founder'].includes(user.role)) { router.replace('/'); return; }
     Promise.all([
       api.get<unknown>('/lessons?limit=1000&status=all').catch(() => ({ data: [] })),
       api.get<unknown>('/children?limit=1000').catch(() => ({ data: [] })),
@@ -183,29 +180,9 @@ export default function FounderPage() {
       const schoolList = ((sRes as { data?: unknown[] }).data ?? []) as SchoolRecord[];
       setSchools(schoolList);
     }).finally(() => setLoading(false));
-  }, [authed]);
+  }, [user, router]);
 
-  if (!authed) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <form onSubmit={handleAuth} className="bg-gray-900 rounded-3xl p-8 w-full max-w-sm space-y-4">
-        <div className="text-center mb-2">
-          <div className="text-5xl mb-3">🔑</div>
-          <h1 className="text-2xl text-brand-pink">Founder Mode</h1>
-          <p className="text-gray-500 text-sm font-body mt-1">Staff JWT or founder PIN</p>
-        </div>
-        <input
-          type="password"
-          placeholder="Enter founder PIN"
-          value={pin}
-          onChange={e => setPin(e.target.value)}
-          className="w-full bg-gray-800 text-white border border-gray-700 rounded-2xl px-4 py-3 outline-none focus:border-brand-pink transition-colors"
-        />
-        <button type="submit" className="w-full py-3 bg-brand-pink text-white rounded-2xl font-bold hover:bg-pink-600 transition-colors">
-          Enter
-        </button>
-      </form>
-    </div>
-  );
+  if (!user || !['admin', 'founder'].includes(user.role)) return null;
 
   const TABS = [
     { id: 'analytics', label: '📊 Analytics' },
@@ -218,10 +195,18 @@ export default function FounderPage() {
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-2xl text-brand-pink font-display">Founder Mode</span>
-          <span className="px-2 py-0.5 bg-brand-pink/20 text-brand-pink rounded-full text-xs font-semibold">LIVE</span>
+          <Link href="/" className="text-2xl text-brand-pink font-display">LittleLearners</Link>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${user.role === 'founder' ? 'bg-brand-pink/20 text-brand-pink' : 'bg-purple-500/20 text-purple-400'}`}>
+            {user.role.toUpperCase()}
+          </span>
         </div>
-        <a href="/" className="text-sm text-gray-400 hover:text-white transition-colors">Exit →</a>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-400 hidden sm:inline">Hi, {user.name}</span>
+          <button onClick={() => { logout(); router.push('/admin-login'); }}
+            className="text-xs text-gray-500 hover:text-red-400 transition-colors">
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}

@@ -28,4 +28,11 @@ const staffOrAbove = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, founderOnly, staffOrAbove };
+const adminOrAbove = (req, res, next) => {
+  if (!['admin', 'founder'].includes(req.user?.role)) {
+    return res.status(403).json({ success: false, message: 'Admin access required' });
+  }
+  next();
+};
+
+module.exports = { protect, founderOnly, staffOrAbove, adminOrAbove };

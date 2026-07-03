@@ -131,8 +131,9 @@ export default function HomePage() {
           🌟 LittleLearners
         </motion.span>
         <div className="flex items-center gap-3">
-          <Link href="/parent-login" className="hidden sm:block text-sm font-semibold text-purple-600 hover:underline">Parent Login</Link>
-          <Link href="/login"        className="text-sm font-semibold text-gray-500 hover:text-gray-800">Staff Login</Link>
+          <Link href="/parent-login"  className="hidden sm:block text-sm font-semibold text-purple-600 hover:underline">Parent Login</Link>
+          <Link href="/staff-login"   className="hidden sm:block text-sm font-semibold text-gray-500 hover:text-gray-800">Staff Login</Link>
+          <Link href="/admin-login"   className="text-sm font-semibold text-gray-500 hover:text-gray-800">Admin Login</Link>
           <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.96 }}>
             <Link href="/dashboard?grade=LKG"
               className="px-4 py-2 text-white rounded-2xl text-sm font-bold shadow-lg"
@@ -403,7 +404,9 @@ export default function HomePage() {
         <div className="flex gap-4 justify-center mt-3">
           <Link href="/parent-login" className="hover:text-gray-600 transition-colors">Parent Login</Link>
           <span>·</span>
-          <Link href="/login"        className="hover:text-gray-600 transition-colors">Staff Login</Link>
+          <Link href="/staff-login"  className="hover:text-gray-600 transition-colors">Staff Login</Link>
+          <span>·</span>
+          <Link href="/admin-login"  className="hover:text-gray-600 transition-colors">Admin Login</Link>
           <span>·</span>
           <Link href="/founder"  className="hover:text-gray-600 transition-colors">About Founder</Link>
           <span>·</span>

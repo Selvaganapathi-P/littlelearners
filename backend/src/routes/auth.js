@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Parent = require('../models/Parent');
-const { protect, founderOnly } = require('../middleware/auth');
+const { protect, founderOnly, adminOrAbove } = require('../middleware/auth');
 const { sendPasswordReset } = require('../utils/email');
 
 const signToken = (user) =>
@@ -61,7 +61,7 @@ router.get('/me', protect, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/users', protect, founderOnly, async (req, res, next) => {
+router.get('/users', protect, adminOrAbove, async (req, res, next) => {
   try {
     const [staffUsers, parents] = await Promise.all([
       User.find({}).select('-password').sort({ createdAt: -1 }),
@@ -71,7 +71,7 @@ router.get('/users', protect, founderOnly, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.patch('/users/:id/toggle-active', protect, founderOnly, async (req, res, next) => {
+router.patch('/users/:id/toggle-active', protect, adminOrAbove, async (req, res, next) => {
   try {
     let user = await User.findById(req.params.id);
     if (!user) user = await Parent.findById(req.params.id);
