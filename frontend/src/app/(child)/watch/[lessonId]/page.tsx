@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { Lesson, Activity, ActivityType } from '@/types';
 import { VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS, ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
@@ -422,6 +422,8 @@ function SpellGame({ activity, onDone }: { activity: Activity; onDone: () => voi
 function ActivityHubContent() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedActivity = searchParams.get('activity') as ActivityType | null;
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -438,10 +440,13 @@ function ActivityHubContent() {
     ]).then(([lessonRes, actRes]) => {
       setLesson(lessonRes.data);
       setActivities(actRes.data);
-      if (actRes.data.length) setActiveTab(actRes.data[0].type);
+      const preferred = requestedActivity && actRes.data.some(a => a.type === requestedActivity)
+        ? requestedActivity
+        : actRes.data[0]?.type ?? null;
+      setActiveTab(preferred);
     }).catch(() => router.push('/'))
       .finally(() => setLoading(false));
-  }, [lessonId, router]);
+  }, [lessonId, router, requestedActivity]);
 
   const handleActivityDone = useCallback((xp: number, coins: number) => {
     setXpToast({ xp, coins });
