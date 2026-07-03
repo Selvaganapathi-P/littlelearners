@@ -48,6 +48,9 @@ export default function FounderPage() {
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'staff' });
   const [creatingUser, setCreatingUser] = useState(false);
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
+  const [changingPasswordUser, setChangingPasswordUser] = useState<UserRecord | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
   const [newSchool, setNewSchool] = useState({ name: '', contactEmail: '', city: '', state: '', plan: 'free' });
   const [creatingSchool, setCreatingSchool] = useState(false);
   const [editingSchool, setEditingSchool] = useState<SchoolRecord | null>(null);
@@ -108,6 +111,23 @@ export default function FounderPage() {
       toast(err instanceof Error ? err.message : 'Failed to create school', 'error');
     } finally {
       setCreatingSchool(false);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!changingPasswordUser) return;
+    if (newPassword.length < 8) { toast('Password must be at least 8 characters', 'warning'); return; }
+    setChangingPassword(true);
+    try {
+      await api.patch(`/auth/users/${changingPasswordUser._id}/password`, { password: newPassword });
+      toast(`Password updated for ${changingPasswordUser.name}`);
+      setChangingPasswordUser(null);
+      setNewPassword('');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to update password', 'error');
+    } finally {
+      setChangingPassword(false);
     }
   }
 
@@ -389,16 +409,25 @@ export default function FounderPage() {
                                   </td>
                                   <td className="px-4 py-3 text-gray-500 font-body text-xs">{new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
                                   <td className="px-4 py-3">
-                                    {u.role !== 'founder' && (
-                                      <button
-                                        onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
-                                        disabled={togglingUser === u._id}
-                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
-                                          u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                        }`}>
-                                        {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
-                                      </button>
-                                    )}
+                                    <div className="flex gap-1.5">
+                                      {u.role !== 'founder' && (
+                                        <>
+                                          <button
+                                            onClick={() => { setChangingPasswordUser(u); setNewPassword(''); }}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors whitespace-nowrap">
+                                            🔑 Password
+                                          </button>
+                                          <button
+                                            onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
+                                            disabled={togglingUser === u._id}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
+                                              u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                            }`}>
+                                            {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -438,14 +467,21 @@ export default function FounderPage() {
                                   <td className="px-4 py-3 text-gray-400 font-body text-xs">{u.email}</td>
                                   <td className="px-4 py-3 text-gray-500 font-body text-xs">{new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
                                   <td className="px-4 py-3">
-                                    <button
-                                      onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
-                                      disabled={togglingUser === u._id}
-                                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
-                                        u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                      }`}>
-                                      {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
-                                    </button>
+                                    <div className="flex gap-1.5">
+                                      <button
+                                        onClick={() => { setChangingPasswordUser(u); setNewPassword(''); }}
+                                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors whitespace-nowrap">
+                                        🔑 Password
+                                      </button>
+                                      <button
+                                        onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
+                                        disabled={togglingUser === u._id}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
+                                          u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                        }`}>
+                                        {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -456,6 +492,44 @@ export default function FounderPage() {
                     </div>
                   );
                 })()}
+              </div>
+            )}
+
+            {/* Change Password Modal */}
+            {changingPasswordUser && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+                <div className="bg-gray-900 border border-gray-700 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-bold text-gray-200">Change Password</h3>
+                    <button onClick={() => { setChangingPasswordUser(null); setNewPassword(''); }} className="text-gray-500 hover:text-white text-xl">✕</button>
+                  </div>
+                  <p className="text-sm text-gray-400 font-body mb-4">
+                    Setting new password for <span className="text-white font-semibold">{changingPasswordUser.name}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">{changingPasswordUser.email}</span>
+                  </p>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <input
+                      type="password"
+                      placeholder="New password (min 8 characters)"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      autoFocus
+                      required
+                      minLength={8}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-400 transition-colors"
+                    />
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => { setChangingPasswordUser(null); setNewPassword(''); }}
+                        className="flex-1 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-300 transition-colors">
+                        Cancel
+                      </button>
+                      <button type="submit" disabled={changingPassword}
+                        className="flex-1 py-2.5 bg-yellow-500 text-gray-900 rounded-xl text-sm font-bold hover:bg-yellow-400 disabled:opacity-50 transition-colors">
+                        {changingPassword ? '⏳ Saving…' : 'Update Password'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
 

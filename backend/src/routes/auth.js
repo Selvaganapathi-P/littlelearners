@@ -71,6 +71,19 @@ router.get('/users', protect, adminOrAbove, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.patch('/users/:id/password', protect, adminOrAbove, async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    let user = await User.findById(req.params.id);
+    if (!user) user = await Parent.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    user.password = password;
+    await user.save();
+    res.json({ success: true, message: 'Password updated' });
+  } catch (err) { next(err); }
+});
+
 router.patch('/users/:id/toggle-active', protect, adminOrAbove, async (req, res, next) => {
   try {
     let user = await User.findById(req.params.id);
