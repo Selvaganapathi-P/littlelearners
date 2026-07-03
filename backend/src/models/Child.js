@@ -36,7 +36,7 @@ const childSchema = new mongoose.Schema({
   }],
   parentUser: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Parent',
   },
   pin: {
     type: String,

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const Parent = require('../models/Parent');
 const { protect, founderOnly } = require('../middleware/auth');
 const { sendPasswordReset } = require('../utils/email');
 
@@ -23,9 +24,10 @@ router.post('/register', [
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
     const { name, email, password, role, school } = req.body;
-    const user = await User.create({ name, email, password, role, school });
+    const Model = role === 'parent' ? Parent : User;
+    const user = await Model.create({ name, email, password, role: role || 'staff', school });
     const token = signToken(user);
-    res.status(201).json({ success: true, token, user: { id: user._id, name, email, role } });
+    res.status(201).json({ success: true, token, user: { id: user._id, name, email, role: user.role } });
   } catch (err) { next(err); }
 });
 
@@ -38,7 +40,8 @@ router.post('/login', [
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
     const { email, password } = req.body;
-    const user = await User.findOne({ email, active: true }).select('+password');
+    let user = await User.findOne({ email, active: true }).select('+password');
+    if (!user) user = await Parent.findOne({ email, active: true }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -51,21 +54,27 @@ router.post('/login', [
 
 router.get('/me', protect, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).populate('school', 'name region');
+    const user = req.user.role === 'parent'
+      ? await Parent.findById(req.user.id)
+      : await User.findById(req.user.id).populate('school', 'name region');
     res.json({ success: true, user });
   } catch (err) { next(err); }
 });
 
 router.get('/users', protect, founderOnly, async (req, res, next) => {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    res.json({ success: true, data: users });
+    const [staffUsers, parents] = await Promise.all([
+      User.find({}).select('-password').sort({ createdAt: -1 }),
+      Parent.find({}).select('-password').sort({ createdAt: -1 }),
+    ]);
+    res.json({ success: true, data: [...staffUsers, ...parents] });
   } catch (err) { next(err); }
 });
 
 router.patch('/users/:id/toggle-active', protect, founderOnly, async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    let user = await User.findById(req.params.id);
+    if (!user) user = await Parent.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (user.role === 'founder') return res.status(403).json({ success: false, message: 'Cannot deactivate founder' });
     user.active = !user.active;
@@ -78,7 +87,8 @@ router.patch('/users/:id/toggle-active', protect, founderOnly, async (req, res, 
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase(), active: true });
+    let user = await User.findOne({ email: email?.toLowerCase(), active: true });
+    if (!user) user = await Parent.findOne({ email: email?.toLowerCase(), active: true });
     // Always return success to prevent email enumeration
     if (!user) return res.json({ success: true, message: 'If that email exists, a reset link was sent.' });
 
