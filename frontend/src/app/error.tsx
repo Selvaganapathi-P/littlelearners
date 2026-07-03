@@ -4,9 +4,12 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const isChunkError = error?.name === 'ChunkLoadError' || error?.message?.includes('Loading chunk');
+
   useEffect(() => {
     console.error('[LittleLearners error]', error);
-  }, [error]);
+    if (isChunkError) window.location.reload();
+  }, [error, isChunkError]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-pink-50 to-purple-50 px-4 text-center">
@@ -17,7 +20,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       </p>
       <div className="flex flex-wrap gap-3 justify-center">
         <button
-          onClick={reset}
+          onClick={() => isChunkError ? window.location.reload() : reset()}
           className="px-6 py-3 bg-brand-pink text-white rounded-2xl font-bold hover:bg-pink-600 transition-colors">
           Try Again
         </button>
