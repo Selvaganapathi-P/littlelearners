@@ -1,33 +1,26 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Grade, Lesson, ThemedCompilation, VideoFormat } from '@/types';
-import { VIDEO_FORMAT_ICONS } from '@/types';
-import { lessonsApi, compilationsApi, childrenApi } from '@/lib/api';
+import type { Grade, Lesson, Activity, ActivityType } from '@/types';
+import { ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
+import { lessonsApi, activitiesApi, childrenApi } from '@/lib/api';
 import type { Child } from '@/types';
 import { ChildNav } from '@/components/ChildNav';
 import { getGradeColor } from '@/lib/utils';
+import {
+  StoryReader, FlashcardDeck, QuizGame,
+  MatchingGame, MemoryGame, SpellGame,
+} from '@/components/activities/ActivityPlayer';
 
-const CATEGORIES: { label: string; format: VideoFormat; emoji: string }[] = [
-  { label: 'Rhymes',   format: 'sing_along',      emoji: '🎤' },
-  { label: 'Phonics',  format: 'phonics_song',     emoji: '🔤' },
-  { label: 'Numbers',  format: 'number_song',      emoji: '🔢' },
-  { label: 'Stories',  format: 'moral_story',      emoji: '📖' },
-  { label: 'Dance',    format: 'action_dance',     emoji: '💃' },
-  { label: 'Yoga',     format: 'yoga_stretch',     emoji: '🧘' },
-  { label: 'Habits',   format: 'good_habits',      emoji: '✨' },
-  { label: 'Festival', format: 'festival_special', emoji: '🎉' },
-];
-
-const LEARNING_FEATURES = [
-  { type: 'story',     label: 'Story',      emoji: '📖', color: '#FF6B9D', bg: '#FFF0F5', desc: 'Read & listen' },
-  { type: 'flashcard', label: 'Flashcards', emoji: '🃏', color: '#7C3AED', bg: '#F5F0FF', desc: 'Flip & learn'  },
-  { type: 'quiz',      label: 'Quiz',       emoji: '❓', color: '#F59E0B', bg: '#FFFBEB', desc: 'Test yourself' },
-  { type: 'matching',  label: 'Match It',   emoji: '🎯', color: '#10B981', bg: '#F0FDF4', desc: 'Find the pairs' },
+const LEARNING_FEATURES: { type: ActivityType; label: string; emoji: string; color: string; bg: string; desc: string }[] = [
+  { type: 'story',     label: 'Story',      emoji: '📖', color: '#FF6B9D', bg: '#FFF0F5', desc: 'Read & listen'   },
+  { type: 'flashcard', label: 'Flashcards', emoji: '🃏', color: '#7C3AED', bg: '#F5F0FF', desc: 'Flip & learn'    },
+  { type: 'quiz',      label: 'Quiz',       emoji: '❓', color: '#F59E0B', bg: '#FFFBEB', desc: 'Test yourself'   },
+  { type: 'matching',  label: 'Match It',   emoji: '🎯', color: '#10B981', bg: '#F0FDF4', desc: 'Find the pairs'  },
   { type: 'memory',    label: 'Memory',     emoji: '🧠', color: '#3B82F6', bg: '#EFF6FF', desc: 'Flip & remember' },
-  { type: 'spell',     label: 'Spell It',   emoji: '✍️', color: '#EC4899', bg: '#FDF2F8', desc: 'Build the word' },
+  { type: 'spell',     label: 'Spell It',   emoji: '✍️', color: '#EC4899', bg: '#FDF2F8', desc: 'Build the word'  },
 ];
 
 function DashboardContent() {
@@ -36,67 +29,181 @@ function DashboardContent() {
   const grade = (params.get('grade') || 'LKG') as Grade;
   const colors = getGradeColor(grade);
 
-  const [firstLesson, setFirstLesson] = useState<Lesson | null>(null);
-  const [compilations, setCompilations] = useState<ThemedCompilation[]>([]);
-  const [activeFormat, setActiveFormat] = useState<VideoFormat | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Home state
   const [childId, setChildId] = useState<string | null>(null);
-  const [continueWatching, setContinueWatching] = useState<{ lesson: Lesson; completedPercent: number }[]>([]);
-  const [childInfo, setChildInfo] = useState<{
-    name: string; avatar: string; streak: number; xp: number; coins: number; level: number;
-  } | null>(null);
+  const [childInfo, setChildInfo] = useState<{ name: string; avatar: string; streak: number; xp: number; coins: number; level: number } | null>(null);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [homeLoading, setHomeLoading] = useState(true);
 
+  // Activity state (when a tile is clicked)
+  const [activeFeature, setActiveFeature] = useState<(typeof LEARNING_FEATURES)[0] | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [actLoading, setActLoading] = useState(false);
+  const [xpToast, setXpToast] = useState<{ xp: number; coins: number } | null>(null);
+
+  // Load child + lessons on mount
   useEffect(() => {
     const childFromUrl = params.get('child');
     const id = childFromUrl ?? localStorage.getItem('ll_child');
     if (childFromUrl) localStorage.setItem('ll_child', childFromUrl);
     setChildId(id);
-    if (!id) return;
-    childrenApi.get(id)
-      .then((res: unknown) => {
-        const child = (res as { data: Child }).data;
+
+    const loadLessons = lessonsApi.list({ grade, limit: '20' }) as Promise<{ data: Lesson[] }>;
+
+    if (id) {
+      Promise.all([
+        childrenApi.get(id) as Promise<{ data: Child }>,
+        loadLessons,
+      ]).then(([childRes, lessonRes]) => {
+        const child = childRes.data;
         if (!params.get('grade') && child.grade) {
           router.replace(`/dashboard?grade=${child.grade}&child=${id}`);
           return;
         }
         setChildInfo({ name: child.name, avatar: child.avatar, streak: child.streaks.current, xp: child.xp ?? 0, coins: child.coins ?? 0, level: child.level ?? 1 });
-        const seen = new Set<string>();
-        const incomplete: { lesson: Lesson; completedPercent: number }[] = [];
-        for (const h of [...child.watchHistory].reverse()) {
-          if (h.completedPercent >= 90 || typeof h.lesson !== 'object' || !h.lesson) continue;
-          const l = h.lesson as Lesson;
-          if (seen.has(l._id)) continue;
-          seen.add(l._id);
-          incomplete.push({ lesson: l, completedPercent: h.completedPercent });
-          if (incomplete.length >= 4) break;
-        }
-        setContinueWatching(incomplete);
-      })
-      .catch(() => {});
-  }, [params, router]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const lessonRes = await lessonsApi.list({ grade, limit: '1', ...(activeFormat ? { format: activeFormat } : {}) }) as { data: Lesson[] };
-      setFirstLesson(lessonRes.data?.[0] ?? null);
-      if (!activeFormat) {
-        compilationsApi.list(grade)
-          .then((r: unknown) => setCompilations((r as { data: ThemedCompilation[] }).data))
-          .catch(() => {});
-      }
-    } finally {
-      setLoading(false);
+        setLessons(lessonRes.data);
+      }).catch(() => {}).finally(() => setHomeLoading(false));
+    } else {
+      loadLessons.then(r => setLessons(r.data)).catch(() => {}).finally(() => setHomeLoading(false));
     }
-  }, [grade, activeFormat]);
+  }, [params, router, grade]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  async function openFeature(feature: typeof LEARNING_FEATURES[0]) {
+    if (!lessons.length) return;
+    setActLoading(true);
+    setActiveFeature(feature);
+    setActivities([]);
+    setCurrentLesson(null);
 
-  function startFeature(type: string) {
-    if (!firstLesson) return;
-    router.push(`/watch/${firstLesson._id}?activity=${type}`);
+    // Try each lesson until we find one with this activity type
+    for (const lesson of lessons) {
+      try {
+        const res = await activitiesApi.forLesson(lesson._id) as { data: Activity[] };
+        const match = res.data.find(a => a.type === feature.type);
+        if (match) {
+          setCurrentLesson(lesson);
+          setActivities(res.data);
+          setActLoading(false);
+          return;
+        }
+      } catch { continue; }
+    }
+    // None found — still show the first lesson's activities
+    try {
+      const res = await activitiesApi.forLesson(lessons[0]._id) as { data: Activity[] };
+      setCurrentLesson(lessons[0]);
+      setActivities(res.data);
+    } catch {}
+    setActLoading(false);
   }
 
+  function goHome() {
+    setActiveFeature(null);
+    setActivities([]);
+    setCurrentLesson(null);
+    setXpToast(null);
+  }
+
+  function handleDone(xp: number, coins: number) {
+    setXpToast({ xp, coins });
+    if (childId && currentLesson) {
+      childrenApi.recordWatch(childId, currentLesson._id, 100).catch(() => {});
+    }
+    setTimeout(() => setXpToast(null), 3000);
+  }
+
+  // ── Activity view ────────────────────────────────────────────────────────────
+  if (activeFeature) {
+    const activity = activities.find(a => a.type === activeFeature.type);
+
+    return (
+      <div className="min-h-screen bg-gray-50 pb-24">
+        {/* XP Toast */}
+        {xpToast && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none"
+            style={{ animation: 'slideDown 0.4s ease-out' }}>
+            <span className="text-2xl">⭐</span>
+            <div>
+              <p className="font-black text-sm">+{xpToast.xp} XP earned!</p>
+              <p className="text-xs text-yellow-100">+{xpToast.coins} coins 🪙</p>
+            </div>
+          </div>
+        )}
+        <style>{`@keyframes slideDown{from{transform:translate(-50%,-40px);opacity:0}to{transform:translate(-50%,0);opacity:1}}`}</style>
+
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+            <button onClick={goHome}
+              className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition flex-shrink-0">
+              ←
+            </button>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-2xl">{activeFeature.emoji}</span>
+              <div className="min-w-0">
+                <p className="font-black text-gray-800 text-sm">{activeFeature.label}</p>
+                {currentLesson && <p className="text-xs text-gray-400 truncate">{currentLesson.title}</p>}
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: colors.primary }}>{grade}</span>
+          </div>
+
+          {/* Switch activity type tabs */}
+          {activities.length > 0 && (
+            <div className="flex gap-1 px-4 pb-3 overflow-x-auto scrollbar-hide max-w-lg mx-auto">
+              {LEARNING_FEATURES.filter(f => activities.some(a => a.type === f.type)).map(f => (
+                <button key={f.type} onClick={() => setActiveFeature(f)}
+                  className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${activeFeature.type === f.type ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  style={activeFeature.type === f.type ? { backgroundColor: f.color } : {}}>
+                  {f.emoji} {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="max-w-lg mx-auto">
+          {actLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="text-6xl animate-bounce">{activeFeature.emoji}</div>
+              <p className="text-gray-400 font-semibold">Loading {activeFeature.label}…</p>
+            </div>
+          ) : !activity ? (
+            <div className="text-center py-20 px-4">
+              <div className="text-6xl mb-4">📚</div>
+              <p className="text-lg font-semibold text-gray-700">No {activeFeature.label} activity yet</p>
+              <p className="text-sm text-gray-400 mt-1 mb-6">Ask your teacher to create a lesson with more content</p>
+              <button onClick={goHome}
+                className="px-6 py-3 rounded-2xl font-bold text-white"
+                style={{ backgroundColor: colors.primary }}>
+                ← Back to Home
+              </button>
+            </div>
+          ) : activity.type === 'story' ? (
+            <StoryReader activity={activity} />
+          ) : activity.type === 'flashcard' ? (
+            <FlashcardDeck activity={activity} onDone={() => handleDone(activity.xpReward, activity.coinsReward)} />
+          ) : activity.type === 'quiz' ? (
+            <QuizGame activity={activity} childId={childId} colors={colors} onDone={(s) => handleDone(Math.round(activity.xpReward * s / 100), Math.round(activity.coinsReward * s / 100))} />
+          ) : activity.type === 'matching' ? (
+            <MatchingGame activity={activity} onDone={() => handleDone(activity.xpReward, activity.coinsReward)} />
+          ) : activity.type === 'memory' ? (
+            <MemoryGame activity={activity} onDone={() => handleDone(activity.xpReward, activity.coinsReward)} />
+          ) : activity.type === 'spell' ? (
+            <SpellGame activity={activity} onDone={() => handleDone(activity.xpReward, activity.coinsReward)} />
+          ) : (
+            <div className="text-center py-20 text-gray-400">Coming soon!</div>
+          )}
+        </div>
+
+        <ChildNav grade={grade} childId={childId} />
+      </div>
+    );
+  }
+
+  // ── Home / Tile selection view ───────────────────────────────────────────────
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: colors.bg }}>
       {/* Header */}
@@ -164,116 +271,33 @@ function DashboardContent() {
           <h1 className="text-3xl font-display" style={{ color: colors.primary }}>
             {grade === 'LKG' ? '🐣 LKG' : '🦋 UKG'} Learning
           </h1>
-          <p className="text-sm text-gray-400 font-body mt-1">Pick a topic, then choose how to learn!</p>
+          <p className="text-sm text-gray-400 font-body mt-1">
+            {homeLoading ? 'Loading…' : lessons.length ? 'Tap any activity to start!' : 'No lessons yet — ask your teacher!'}
+          </p>
         </div>
 
-        {/* Topic filter */}
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Choose a Topic</p>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button
-              onClick={() => setActiveFormat(null)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full font-bold text-sm transition-all ${!activeFormat ? 'text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
-              style={!activeFormat ? { backgroundColor: colors.primary } : {}}>
-              All
-            </button>
-            {CATEGORIES.map(c => (
-              <button
-                key={c.format}
-                onClick={() => setActiveFormat(prev => prev === c.format ? null : c.format)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full font-bold text-sm transition-all ${activeFormat === c.format ? 'text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
-                style={activeFormat === c.format ? { backgroundColor: colors.primary } : {}}>
-                {c.emoji} {c.label}
-              </button>
+        {/* Feature tiles */}
+        {homeLoading ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-32 rounded-3xl bg-white animate-pulse" />
             ))}
           </div>
-        </div>
-
-        {/* Continue Learning */}
-        {continueWatching.length > 0 && (
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Continue Learning</p>
-            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-              {continueWatching.map(({ lesson, completedPercent }) => (
-                <Link key={lesson._id} href={`/watch/${lesson._id}`} className="flex-shrink-0 w-40">
-                  <div className="bg-white rounded-2xl overflow-hidden card-shadow hover:scale-105 transition-transform">
-                    <div className="h-20 flex items-center justify-center text-3xl" style={{ backgroundColor: colors.secondary + '22' }}>
-                      {VIDEO_FORMAT_ICONS[lesson.videoFormat]}
-                    </div>
-                    <div className="h-1 bg-gray-100">
-                      <div className="h-1" style={{ width: `${completedPercent}%`, backgroundColor: colors.primary }} />
-                    </div>
-                    <div className="p-2.5">
-                      <p className="font-bold text-gray-800 text-xs leading-tight line-clamp-2">{lesson.title}</p>
-                      <p className="text-xs mt-0.5" style={{ color: colors.primary }}>{completedPercent}% done</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Learning Feature Tiles */}
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            {loading
-              ? 'Loading…'
-              : firstLesson
-                ? `How do you want to learn today?`
-                : 'No lessons yet for this topic'}
-          </p>
-          {loading ? (
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-28 rounded-3xl bg-white animate-pulse" />
-              ))}
-            </div>
-          ) : firstLesson ? (
-            <>
-              <p className="text-sm font-semibold text-gray-500 mb-4 truncate">
-                Lesson: <span style={{ color: colors.primary }}>{firstLesson.title}</span>
-              </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {LEARNING_FEATURES.map(f => (
-                  <button
-                    key={f.type}
-                    onClick={() => startFeature(f.type)}
-                    className="relative group text-left rounded-3xl p-5 transition-all duration-200 hover:scale-[1.04] active:scale-95 overflow-hidden shadow-sm hover:shadow-md"
-                    style={{ backgroundColor: f.bg }}>
-                    <div className="absolute -top-5 -right-5 w-20 h-20 rounded-full opacity-15" style={{ backgroundColor: f.color }} />
-                    <div className="text-4xl mb-3 relative">{f.emoji}</div>
-                    <p className="font-display text-lg leading-tight relative" style={{ color: f.color }}>{f.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 font-body relative">{f.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-10 text-gray-400">
-              <div className="text-5xl mb-3">📚</div>
-              <p className="text-sm">No lessons yet. Ask your teacher to create some!</p>
-            </div>
-          )}
-        </div>
-
-        {/* Themed Collections */}
-        {compilations.length > 0 && !activeFormat && (
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Themed Collections</p>
-            <div className="grid grid-cols-2 gap-3">
-              {compilations.map(comp => (
-                <Link key={comp._id} href={`/playlist/${comp._id}`}>
-                  <div className="bg-white rounded-2xl p-4 card-shadow hover:scale-[1.03] transition-transform flex items-center gap-3">
-                    <span className="text-2xl flex-shrink-0">📋</span>
-                    <div className="min-w-0">
-                      <p className="font-bold text-gray-800 text-sm truncate">{comp.title}</p>
-                      <p className="text-xs text-gray-400">{comp.lessons.length} lessons</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {LEARNING_FEATURES.map(f => (
+              <button
+                key={f.type}
+                onClick={() => openFeature(f)}
+                disabled={!lessons.length}
+                className="relative text-left rounded-3xl p-5 transition-all duration-200 hover:scale-[1.04] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden shadow-sm hover:shadow-lg"
+                style={{ backgroundColor: f.bg }}>
+                <div className="absolute -top-5 -right-5 w-20 h-20 rounded-full opacity-20" style={{ backgroundColor: f.color }} />
+                <div className="text-4xl mb-3 relative">{f.emoji}</div>
+                <p className="font-display text-lg leading-tight relative" style={{ color: f.color }}>{f.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5 font-body relative">{f.desc}</p>
+              </button>
+            ))}
           </div>
         )}
 
