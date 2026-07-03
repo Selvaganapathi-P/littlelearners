@@ -408,7 +408,9 @@ export default function HomePage() {
           <span>·</span>
           <Link href="/login"    className="hover:text-gray-600 transition-colors">Staff Login</Link>
           <span>·</span>
-          <Link href="/founder"  className="hover:text-gray-600 transition-colors">Founder Mode</Link>
+          <Link href="/founder"  className="hover:text-gray-600 transition-colors">About Founder</Link>
+          <span>·</span>
+          <Link href="/admin"    className="hover:text-gray-600 transition-colors">Admin</Link>
         </div>
       </footer>
     </main>

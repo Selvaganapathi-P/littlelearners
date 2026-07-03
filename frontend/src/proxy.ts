@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const STAFF_PATHS = ['/studio', '/calendar'];
-const ADMIN_PATHS = ['/founder'];
+const ADMIN_PATHS = ['/admin'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,5 +22,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/studio/:path*', '/calendar/:path*', '/founder/:path*'],
+  matcher: ['/studio/:path*', '/calendar/:path*', '/admin/:path*'],
 };
