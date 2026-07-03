@@ -11,7 +11,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace('/login');
+      router.replace('/staff-login');
     }
     if (!isLoading && user && !['staff', 'admin', 'founder'].includes(user.role)) {
       router.replace('/');

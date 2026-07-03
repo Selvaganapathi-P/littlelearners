@@ -168,7 +168,7 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (!user) { router.replace('/admin-login'); return; }
+    if (!user) { router.replace('/'); return; }
     if (!['admin', 'founder'].includes(user.role)) { router.replace('/'); return; }
     Promise.all([
       api.get<unknown>('/lessons?limit=1000&status=all').catch(() => ({ data: [] })),

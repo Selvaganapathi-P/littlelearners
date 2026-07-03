@@ -25,7 +25,7 @@ export default function ProgressReportPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) { router.replace('/login'); return; }
+    if (!user) { router.replace('/parent-login'); return; }
     if (user.role !== 'parent') { router.replace('/'); return; }
     childrenApi.get(childId)
       .then((res: unknown) => setChild((res as { data: Child }).data))
