@@ -17,10 +17,12 @@ function autoGenerateActivities(lesson) {
   const script = lesson.scriptText || `Let's learn about ${title}! This is a fun ${fmt.replace(/_/g, ' ')} for ${lesson.grade} students.`;
   const sentences = script.match(/[^.!?]+[.!?]+/g) || [script];
   const chunkSize = 2;
+  const PAGE_EMOJIS = ['🌟', '📚', '🎉', '🌈', '🎵', '🦋', '🎨', '🌸', '🦄', '🎀'];
+  const PAGE_BGS    = ['#FFF0F5', '#F5F0FF', '#FFFBEB', '#F0FDF4', '#EFF6FF', '#FDF2F8', '#FFF9F0', '#F0F9FF', '#FFF7ED', '#F5F3FF'];
   const pages = [];
   for (let i = 0; i < sentences.length; i += chunkSize) {
     const text = sentences.slice(i, i + chunkSize).join(' ').trim();
-    if (text.length > 5) pages.push({ text, emoji: ['🌟', '📚', '🎉', '🌈', '🎵', '🦋'][i % 6], bg: '#FFF9F0' });
+    if (text.length > 5) pages.push({ text, emoji: PAGE_EMOJIS[i % PAGE_EMOJIS.length], bg: PAGE_BGS[i % PAGE_BGS.length] });
   }
   if (pages.length) activities.push({ type: 'story', title: `📖 ${title} — Story`, content: { pages } });
 

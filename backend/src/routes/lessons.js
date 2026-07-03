@@ -16,7 +16,8 @@ router.get('/', async (req, res, next) => {
     if (tags) filter.tags = { $in: tags.split(',') };
     if (title) filter.title = { $regex: title, $options: 'i' };
     if (status && status !== 'all') filter.status = status;
-    else if (!status) filter.status = 'published';
+    else if (status === 'all') filter.status = { $ne: 'archived' };
+    else filter.status = 'published';
 
     const skip = (Number(page) - 1) * Number(limit);
     const [lessons, total] = await Promise.all([
