@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authApi } from '@/lib/api';
@@ -9,11 +9,17 @@ import type { User } from '@/types';
 
 export default function ParentLoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'parent') router.replace('/parent');
+    else if (user?.role === 'staff') router.replace('/staff');
+    else if (user?.role === 'admin' || user?.role === 'founder') router.replace('/admin');
+  }, [user, router]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +28,8 @@ export default function ParentLoginPage() {
     try {
       const res = await authApi.login(email, password);
       login(res.token, res.user as User);
-      if (res.user.role === 'parent') router.push('/parent');
-      else router.push('/');
+      if (res.user.role === 'parent') router.replace('/parent');
+      else router.replace('/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
