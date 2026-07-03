@@ -1,370 +1,364 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Lesson, ThemedCompilation } from '@/types';
-import { VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS } from '@/types';
-import { lessonsApi, childrenApi, compilationsApi } from '@/lib/api';
-import { formatDuration, getGradeColor } from '@/lib/utils';
+import type { Lesson, Activity, ActivityType } from '@/types';
+import { VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS, ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
+import { lessonsApi, activitiesApi, childrenApi } from '@/lib/api';
+import { getGradeColor } from '@/lib/utils';
 
-function WatchContent() {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StoryReader({ activity }: { activity: Activity }) {
+  const pages = activity.content.pages ?? [];
+  const [page, setPage] = useState(0);
+  if (!pages.length) return <div className="text-center py-12 text-gray-400">No story pages yet.</div>;
+  const p = pages[page];
+  return (
+    <div className="flex flex-col items-center gap-6 py-6 px-4">
+      <div className="w-full max-w-lg rounded-3xl p-8 text-center shadow-lg" style={{ backgroundColor: p.bg || '#FFF9F0', minHeight: 220 }}>
+        <div className="text-6xl mb-4">{p.emoji || '📖'}</div>
+        <p className="text-xl font-semibold text-gray-800 leading-relaxed">{p.text}</p>
+      </div>
+      <div className="flex items-center gap-4">
+        <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+          className="w-12 h-12 rounded-full bg-white shadow text-2xl disabled:opacity-30 hover:bg-gray-50 transition">◀</button>
+        <span className="text-sm text-gray-500 font-semibold">{page + 1} / {pages.length}</span>
+        <button onClick={() => setPage(p => Math.min(pages.length - 1, p + 1))} disabled={page === pages.length - 1}
+          className="w-12 h-12 rounded-full bg-white shadow text-2xl disabled:opacity-30 hover:bg-gray-50 transition">▶</button>
+      </div>
+      <div className="flex gap-1.5">
+        {pages.map((_, i) => <div key={i} className={`w-2 h-2 rounded-full transition-all ${i === page ? 'bg-orange-400 w-4' : 'bg-gray-200'}`} />)}
+      </div>
+    </div>
+  );
+}
+
+function FlashcardDeck({ activity, onDone }: { activity: Activity; onDone: () => void }) {
+  const cards = activity.content.cards ?? [];
+  const [idx, setIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [done, setDone] = useState(false);
+  if (!cards.length) return <div className="text-center py-12 text-gray-400">No flashcards yet.</div>;
+  if (done) return (
+    <div className="text-center py-12">
+      <div className="text-6xl mb-4">🎉</div>
+      <p className="text-2xl font-bold text-gray-800 mb-2">All done!</p>
+      <p className="text-gray-500 mb-6">You reviewed {cards.length} cards</p>
+      <button onClick={() => { setIdx(0); setFlipped(false); setDone(false); }} className="px-6 py-3 bg-orange-400 text-white rounded-2xl font-bold mr-3">Again</button>
+      <button onClick={onDone} className="px-6 py-3 bg-green-500 text-white rounded-2xl font-bold">Done ✓</button>
+    </div>
+  );
+  const card = cards[idx];
+  return (
+    <div className="flex flex-col items-center gap-6 py-6 px-4">
+      <p className="text-sm text-gray-400 font-semibold">{idx + 1} / {cards.length}</p>
+      <div onClick={() => setFlipped(f => !f)} className="w-full max-w-sm cursor-pointer" style={{ perspective: 1000 }}>
+        <div className="relative w-full transition-all duration-500" style={{ transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)', height: 220 }}>
+          {/* Front */}
+          <div className="absolute inset-0 rounded-3xl bg-white shadow-xl flex flex-col items-center justify-center gap-3" style={{ backfaceVisibility: 'hidden' }}>
+            <div className="text-5xl">{card.emoji || '⭐'}</div>
+            <p className="text-4xl font-black text-gray-800">{card.front}</p>
+            <p className="text-xs text-gray-400">Tap to flip</p>
+          </div>
+          {/* Back */}
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-orange-400 to-yellow-400 shadow-xl flex flex-col items-center justify-center gap-2 p-6" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+            <p className="text-3xl font-black text-white">{card.back}</p>
+            {card.example && <p className="text-sm text-white/80 text-center">{card.example}</p>}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        {idx < cards.length - 1
+          ? <button onClick={() => { setIdx(i => i + 1); setFlipped(false); }} className="px-8 py-3 bg-orange-400 text-white rounded-2xl font-bold">Next →</button>
+          : <button onClick={() => setDone(true)} className="px-8 py-3 bg-green-500 text-white rounded-2xl font-bold">Finish 🎉</button>
+        }
+      </div>
+    </div>
+  );
+}
+
+function QuizGame({ activity, childId, colors, onDone }: { activity: Activity; childId: string | null; colors: { primary: string }; onDone: (score: number) => void }) {
+  const questions = activity.content.questions ?? [];
+  const [qIdx, setQIdx] = useState(0);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!questions.length) return <div className="text-center py-12 text-gray-400">No quiz questions yet.</div>;
+
+  const q = questions[qIdx];
+
+  async function handleSubmit(finalAnswers: number[]) {
+    if (!childId) { setShowResult(true); return; }
+    setSubmitting(true);
+    try {
+      const res = await activitiesApi.submit(activity._id, childId, finalAnswers) as { data: { score: number } };
+      setScore(res.data.score);
+    } catch { setScore(Math.round((finalAnswers.filter((a, i) => a === questions[i]?.correct).length / questions.length) * 100)); }
+    setSubmitting(false);
+    setShowResult(true);
+    onDone(score);
+  }
+
+  function pick(optIdx: number) {
+    if (chosen !== null) return;
+    setChosen(optIdx);
+    const newAnswers = [...answers, optIdx];
+    setAnswers(newAnswers);
+    setTimeout(() => {
+      if (qIdx < questions.length - 1) { setQIdx(i => i + 1); setChosen(null); }
+      else handleSubmit(newAnswers);
+    }, 1200);
+  }
+
+  if (showResult) {
+    const correct = answers.filter((a, i) => a === questions[i]?.correct).length;
+    return (
+      <div className="flex flex-col items-center py-10 px-4 gap-4">
+        <div className="text-7xl">{score === 100 ? '🌟' : score >= 60 ? '😊' : '🤔'}</div>
+        <h2 className="text-3xl font-black text-gray-800">{score === 100 ? 'Perfect!' : score >= 60 ? 'Well done!' : 'Keep trying!'}</h2>
+        <div className="text-xl font-bold" style={{ color: colors.primary }}>{correct} / {questions.length} correct</div>
+        <div className="w-full max-w-xs bg-gray-100 rounded-full h-4">
+          <div className="h-4 rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: colors.primary }} />
+        </div>
+        <button onClick={() => { setQIdx(0); setChosen(null); setAnswers([]); setShowResult(false); setScore(0); }}
+          className="px-8 py-3 bg-orange-400 text-white rounded-2xl font-bold mt-2">Try Again</button>
+      </div>
+    );
+  }
+
+  if (submitting) return <div className="text-center py-16 text-gray-500 text-lg">Saving results…</div>;
+
+  return (
+    <div className="flex flex-col gap-5 py-6 px-4 max-w-lg mx-auto">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm font-semibold text-gray-400">Question {qIdx + 1} of {questions.length}</span>
+        <div className="flex-1 bg-gray-100 rounded-full h-2">
+          <div className="h-2 rounded-full transition-all" style={{ width: `${((qIdx) / questions.length) * 100}%`, backgroundColor: colors.primary }} />
+        </div>
+      </div>
+      {q.emoji && <div className="text-5xl text-center">{q.emoji}</div>}
+      <p className="text-xl font-bold text-gray-800 text-center">{q.question}</p>
+      <div className="grid grid-cols-1 gap-3">
+        {q.options.map((opt, i) => {
+          const isCorrect = i === q.correct;
+          const isChosen = i === chosen;
+          let bg = 'bg-white border-2 border-gray-100';
+          if (chosen !== null && isCorrect) bg = 'bg-green-100 border-2 border-green-400';
+          else if (isChosen && !isCorrect) bg = 'bg-red-100 border-2 border-red-400';
+          return (
+            <button key={i} onClick={() => pick(i)}
+              className={`w-full text-left px-5 py-4 rounded-2xl font-semibold text-gray-800 transition-all ${bg} ${chosen === null ? 'hover:border-orange-300 hover:bg-orange-50' : ''}`}>
+              {chosen !== null && isCorrect && '✅ '}{chosen !== null && isChosen && !isCorrect && '❌ '}{opt}
+            </button>
+          );
+        })}
+      </div>
+      {chosen !== null && q.explanation && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700 font-medium">{q.explanation}</div>
+      )}
+    </div>
+  );
+}
+
+function MatchingGame({ activity, onDone }: { activity: Activity; onDone: () => void }) {
+  const pairs = activity.content.pairs ?? [];
+  const [selected, setSelected] = useState<string | null>(null);
+  const [matched, setMatched] = useState<Set<string>>(new Set());
+  const [wrong, setWrong] = useState<string | null>(null);
+
+  const words = pairs.map(p => p.word);
+  const emojis = pairs.map(p => p.emoji);
+  // Shuffle both columns
+  const [shuffledWords] = useState(() => [...words].sort(() => Math.random() - 0.5));
+  const [shuffledEmojis] = useState(() => [...emojis].sort(() => Math.random() - 0.5));
+
+  function pick(val: string) {
+    if (matched.has(val)) return;
+    if (!selected) { setSelected(val); return; }
+    // Check if selected + val form a valid pair
+    const wordPick = words.includes(selected) ? selected : val;
+    const emojiPick = emojis.includes(selected) ? selected : val;
+    const pair = pairs.find(p => p.word === wordPick && p.emoji === emojiPick);
+    if (pair) {
+      const newMatched = new Set(matched);
+      newMatched.add(pair.word); newMatched.add(pair.emoji);
+      setMatched(newMatched);
+      setSelected(null);
+      if (newMatched.size === pairs.length * 2) setTimeout(onDone, 800);
+    } else {
+      setWrong(val);
+      setTimeout(() => { setSelected(null); setWrong(null); }, 700);
+    }
+  }
+
+  return (
+    <div className="py-6 px-4">
+      <p className="text-center text-sm text-gray-400 font-semibold mb-6">Tap a word, then its matching picture</p>
+      <div className="grid grid-cols-2 gap-6 max-w-md mx-auto">
+        <div className="flex flex-col gap-3">
+          {shuffledWords.map(w => {
+            const isMatched = matched.has(w);
+            const isSel = selected === w;
+            const isWrong = wrong === w;
+            return (
+              <button key={w} onClick={() => pick(w)}
+                className={`py-3 px-4 rounded-2xl font-bold text-sm transition-all ${isMatched ? 'bg-green-100 text-green-600 line-through' : isSel ? 'bg-orange-400 text-white scale-105' : isWrong ? 'bg-red-100 text-red-500' : 'bg-white border-2 border-gray-100 text-gray-700 hover:border-orange-300'}`}>
+                {w}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-3">
+          {shuffledEmojis.map(e => {
+            const isMatched = matched.has(e);
+            const isSel = selected === e;
+            const isWrong = wrong === e;
+            return (
+              <button key={e} onClick={() => pick(e)}
+                className={`py-3 px-4 rounded-2xl text-2xl transition-all ${isMatched ? 'bg-green-100 opacity-50' : isSel ? 'bg-orange-400 scale-105' : isWrong ? 'bg-red-100' : 'bg-white border-2 border-gray-100 hover:border-orange-300'}`}>
+                {e}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {matched.size === pairs.length * 2 && (
+        <div className="text-center mt-8">
+          <div className="text-5xl mb-2">🎯</div>
+          <p className="text-xl font-bold text-gray-800">All matched!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+function ActivityHubContent() {
   const { lessonId } = useParams<{ lessonId: string }>();
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const recordedRef = useRef(false);
-
-  const playlistId = searchParams.get('playlist');
-  const playlistIdx = Number(searchParams.get('idx') ?? 0);
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [related, setRelated] = useState<Lesson[]>([]);
-  const [playlist, setPlaylist] = useState<ThemedCompilation | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activeTab, setActiveTab] = useState<ActivityType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [celebrated, setCelebrated] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [newBadge, setNewBadge] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [xpToast, setXpToast] = useState<{ xp: number; coins: number } | null>(null);
+  const [childId, setChildId] = useState<string | null>(null);
 
   useEffect(() => {
-    recordedRef.current = false;
-    setCelebrated(false);
-    setCountdown(0);
-    setPlaylist(null);
-
-    const lessonReq = lessonsApi.get(lessonId).then((res: unknown) => {
-      const data = (res as { data: Lesson }).data;
-      setLesson(data);
-      lessonsApi.list({ grade: data.grade, format: data.videoFormat, limit: '6' })
-        .then((r: unknown) => {
-          const all = (r as { data: Lesson[] }).data;
-          setRelated(all.filter(l => l._id !== data._id).slice(0, 4));
-        })
-        .catch(() => {});
-      return data;
-    });
-
-    const playlistReq = playlistId
-      ? compilationsApi.get(playlistId).then((r: unknown) => {
-          setPlaylist((r as { data: ThemedCompilation }).data);
-        }).catch(() => {})
-      : Promise.resolve();
-
-    Promise.all([lessonReq, playlistReq])
-      .catch(() => router.push('/'))
+    setChildId(typeof window !== 'undefined' ? localStorage.getItem('ll_child') : null);
+    Promise.all([
+      lessonsApi.get(lessonId) as Promise<{ data: Lesson }>,
+      activitiesApi.forLesson(lessonId) as Promise<{ data: Activity[] }>,
+    ]).then(([lessonRes, actRes]) => {
+      setLesson(lessonRes.data);
+      setActivities(actRes.data);
+      if (actRes.data.length) setActiveTab(actRes.data[0].type);
+    }).catch(() => router.push('/'))
       .finally(() => setLoading(false));
-  }, [lessonId, playlistId, router]);
+  }, [lessonId, router]);
 
-  const nextPlaylistLesson = playlist?.lessons[playlistIdx + 1] ?? null;
-  const isLastInPlaylist = playlist ? playlistIdx >= playlist.lessons.length - 1 : false;
-
-  const goToNext = useCallback(() => {
-    setCelebrated(false);
-    setCountdown(0);
-    if (playlist && nextPlaylistLesson) {
-      router.push(`/watch/${nextPlaylistLesson._id}?playlist=${playlistId}&idx=${playlistIdx + 1}`);
-    } else if (playlist && isLastInPlaylist) {
-      router.push(`/playlist/${playlistId}`);
-    } else if (related[0]) {
-      router.push(`/watch/${related[0]._id}`);
-    } else {
-      router.push(`/dashboard?grade=${lesson?.grade ?? 'LKG'}`);
+  const handleActivityDone = useCallback((xp: number, coins: number) => {
+    setXpToast({ xp, coins });
+    setTimeout(() => setXpToast(null), 3000);
+    if (childId) {
+      childrenApi.recordWatch(childId, lessonId, 100).catch(() => {});
     }
-  }, [playlist, nextPlaylistLesson, isLastInPlaylist, related, router, lesson, playlistId, playlistIdx]);
-
-  // Auto-play countdown
-  useEffect(() => {
-    if (!celebrated || countdown <= 0) {
-      if (celebrated && countdown === 0) goToNext();
-      return;
-    }
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [celebrated, countdown, goToNext]);
-
-  // Keyboard shortcuts: Space = play/pause, ← = -5s, → = +5s
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const vid = videoRef.current;
-      if (!vid) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.code === 'Space') { e.preventDefault(); vid.paused ? vid.play() : vid.pause(); }
-      else if (e.code === 'ArrowLeft') { e.preventDefault(); vid.currentTime = Math.max(0, vid.currentTime - 5); }
-      else if (e.code === 'ArrowRight') { e.preventDefault(); vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 5); }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  async function handleShare() {
-    if (!lesson) return;
-    const url = window.location.href;
-    const text = `Watch "${lesson.title}" on LittleLearners! 🌟`;
-    if (navigator.share) {
-      try { await navigator.share({ title: lesson.title, text, url }); return; } catch {}
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`, '_blank');
-  }
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  }
-
-  function recordWatch(completedPercent: number) {
-    if (recordedRef.current) return;
-    const childId = typeof window !== 'undefined' ? localStorage.getItem('ll_child') : null;
-    if (!childId) return;
-    recordedRef.current = true;
-    childrenApi.recordWatch(childId, lessonId, completedPercent)
-      .then((res: unknown) => {
-        const badges = (res as { newBadges?: { name: string }[] }).newBadges;
-        if (badges && badges.length > 0) setNewBadge(badges[0].name);
-      })
-      .catch(() => {});
-  }
-
-  function handleTimeUpdate() {
-    const vid = videoRef.current;
-    if (!vid || !vid.duration) return;
-    const pct = Math.round((vid.currentTime / vid.duration) * 100);
-    if (pct >= 80) recordWatch(pct);
-  }
-
-  function handleEnded() {
-    recordWatch(100);
-    setCelebrated(true);
-    setCountdown(5);
-  }
+  }, [childId, lessonId]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-6xl animate-bounce">🌟</div>
     </div>
   );
-
   if (!lesson) return null;
 
   const colors = getGradeColor(lesson.grade);
-
-  const nextLabel = playlist && nextPlaylistLesson
-    ? `▶ Next in Playlist`
-    : playlist && isLastInPlaylist
-      ? `🎉 Playlist Done!`
-      : related[0]
-        ? '▶ Next Video'
-        : '🏠 Back to Videos';
+  const currentActivity = activities.find(a => a.type === activeTab);
+  const tabOrder: ActivityType[] = ['story', 'flashcard', 'quiz', 'matching', 'phonics', 'fill_blank'];
+  const availableTabs = tabOrder.filter(t => activities.some(a => a.type === t));
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Playlist context banner */}
-      {playlist && (
-        <div className="bg-brand-orange/20 border-b border-brand-orange/30 px-4 py-2 flex items-center justify-between">
-          <span className="text-white/80 text-xs font-body">
-            📋 {playlist.title} · {playlistIdx + 1} of {playlist.lessons.length}
-          </span>
-          <Link href={`/playlist/${playlistId}`} className="text-brand-orange text-xs font-semibold hover:underline">
-            View playlist →
-          </Link>
-        </div>
-      )}
-
-      {/* Completion celebration overlay */}
-      {celebrated && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="text-center px-6">
-            <div className="text-8xl mb-4 animate-bounce">
-              {isLastInPlaylist ? '🎉' : '🌟'}
-            </div>
-            <h2 className="text-4xl text-white mb-2" style={{ textShadow: `0 0 20px ${colors.primary}` }}>
-              {isLastInPlaylist ? 'Playlist Complete!' : 'Amazing!'}
-            </h2>
-            <p className="text-white/70 font-body text-lg mb-8">
-              {playlist && nextPlaylistLesson
-                ? `Up next: ${nextPlaylistLesson.title}`
-                : isLastInPlaylist
-                  ? `You finished all ${playlist!.lessons.length} videos!`
-                  : 'You finished watching!'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={goToNext}
-                className="px-6 py-3 rounded-2xl font-bold text-white text-sm transition-colors flex items-center gap-2"
-                style={{ backgroundColor: colors.primary }}>
-                {nextLabel}
-                {countdown > 0 && (
-                  <span className="inline-flex items-center justify-center w-6 h-6 bg-white/30 rounded-full text-xs font-bold">
-                    {countdown}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => router.push(`/dashboard?grade=${lesson.grade}`)}
-                className="px-6 py-3 bg-white/20 text-white rounded-2xl font-bold text-sm hover:bg-white/30 transition-colors">
-                🏠 All Videos
-              </button>
-              <button
-                onClick={() => { setCelebrated(false); setCountdown(0); }}
-                className="px-6 py-3 bg-transparent text-white/50 rounded-2xl font-bold text-sm hover:text-white transition-colors">
-                ✕ Stay here
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Badge earned toast */}
-      {newBadge && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-yellow-400 text-gray-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-          <span className="text-2xl">🏅</span>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* XP Toast */}
+      {xpToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-400 text-gray-900 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <span className="text-2xl">⭐</span>
           <div>
-            <p className="font-bold text-sm">Badge Earned!</p>
-            <p className="text-xs font-semibold">{newBadge}</p>
+            <p className="font-black text-sm">+{xpToast.xp} XP • +{xpToast.coins} Coins!</p>
           </div>
-          <button onClick={() => setNewBadge(null)} className="ml-2 text-gray-600 hover:text-gray-900 text-lg leading-none">✕</button>
         </div>
       )}
 
-      {/* Video area */}
-      <div className="relative bg-black w-full" style={{ aspectRatio: '16/9', maxHeight: '65vh' }}>
-        {lesson.videoUrl ? (
-          <video
-            ref={videoRef}
-            className="w-full h-full object-contain"
-            src={lesson.videoUrl}
-            controls
-            autoPlay
-            playsInline
-            onTimeUpdate={handleTimeUpdate}
-            onEnded={handleEnded}
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-            <div className="text-8xl">{VIDEO_FORMAT_ICONS[lesson.videoFormat]}</div>
-            <p className="text-white/60 font-body text-sm">Video generating… check back soon!</p>
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <button onClick={() => router.back()} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</button>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-gray-800 text-sm leading-tight truncate">{lesson.title}</p>
+            <p className="text-xs text-gray-400">{VIDEO_FORMAT_ICONS[lesson.videoFormat]} {VIDEO_FORMAT_LABELS[lesson.videoFormat]} · {lesson.grade}</p>
+          </div>
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ backgroundColor: colors.primary }}>{lesson.grade}</span>
+        </div>
+
+        {/* Activity tabs */}
+        {availableTabs.length > 1 && (
+          <div className="flex gap-1 px-4 pb-3 overflow-x-auto scrollbar-hide max-w-2xl mx-auto">
+            {availableTabs.map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all ${activeTab === tab ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                style={activeTab === tab ? { backgroundColor: colors.primary } : {}}>
+                {ACTIVITY_ICONS[tab]} {ACTIVITY_LABELS[tab]}
+              </button>
+            ))}
           </div>
         )}
-
-        <button
-          onClick={() => router.back()}
-          className="absolute top-4 left-4 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/70 transition-colors"
-          aria-label="Go back"
-        >
-          ←
-        </button>
       </div>
 
-      {/* Meta + related */}
-      <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <h1 className="text-2xl text-white mb-2">{lesson.title}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400 mb-4">
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ backgroundColor: colors.primary }}>
-              {lesson.grade}
-            </span>
-            <span>{VIDEO_FORMAT_ICONS[lesson.videoFormat]} {VIDEO_FORMAT_LABELS[lesson.videoFormat]}</span>
-            {lesson.durationSeconds && <span>· {formatDuration(lesson.durationSeconds)}</span>}
-            {lesson.viewCount > 0 && <span>· 👁 {lesson.viewCount}</span>}
+      {/* Content */}
+      <div className="max-w-2xl mx-auto">
+        {!currentActivity ? (
+          <div className="text-center py-20 text-gray-400">
+            <div className="text-6xl mb-4">📚</div>
+            <p className="text-lg font-semibold">Activities loading…</p>
           </div>
+        ) : currentActivity.type === 'story' ? (
+          <StoryReader activity={currentActivity} />
+        ) : currentActivity.type === 'flashcard' ? (
+          <FlashcardDeck activity={currentActivity} onDone={() => handleActivityDone(currentActivity.xpReward, currentActivity.coinsReward)} />
+        ) : currentActivity.type === 'quiz' ? (
+          <QuizGame activity={currentActivity} childId={childId} colors={colors} onDone={(s) => handleActivityDone(Math.round(currentActivity.xpReward * s / 100), Math.round(currentActivity.coinsReward * s / 100))} />
+        ) : currentActivity.type === 'matching' ? (
+          <MatchingGame activity={currentActivity} onDone={() => handleActivityDone(currentActivity.xpReward, currentActivity.coinsReward)} />
+        ) : (
+          <div className="text-center py-20 text-gray-400">Activity type coming soon!</div>
+        )}
+      </div>
 
-          {lesson.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {lesson.tags.map(tag => (
-                <a key={tag}
-                  href={`/dashboard?grade=${lesson.grade}&tag=${encodeURIComponent(tag)}`}
-                  className="px-3 py-1 bg-white/10 rounded-full text-xs text-gray-300 hover:bg-white/20 hover:text-white transition-colors">
-                  #{tag}
-                </a>
-              ))}
-            </div>
-          )}
-
-          {/* Share actions */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors">
-              💬 Share
-            </button>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-gray-300 rounded-xl text-sm font-bold hover:bg-white/20 transition-colors">
-              {copied ? '✓ Copied!' : '🔗 Copy Link'}
-            </button>
-          </div>
-
-          <Link href={`/dashboard?grade=${lesson.grade}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-sm hover:bg-white/20 transition-colors">
-            ← All {lesson.grade} videos
-          </Link>
+      {/* Tags */}
+      {lesson.tags.length > 0 && (
+        <div className="max-w-2xl mx-auto px-4 py-4 flex flex-wrap gap-2 border-t border-gray-100 mt-4">
+          {lesson.tags.map(t => (
+            <Link key={t} href={`/dashboard?grade=${lesson.grade}&tag=${encodeURIComponent(t)}`}
+              className="px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-500 border border-gray-200 hover:border-orange-300 hover:text-orange-500 transition">
+              #{t}
+            </Link>
+          ))}
         </div>
-
-        {/* Up next column: playlist items OR related */}
-        {playlist ? (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              Playlist · {playlistIdx + 1}/{playlist.lessons.length}
-            </h2>
-            <div className="space-y-2">
-              {playlist.lessons.map((pl, i) => {
-                const isCurrent = pl._id === lessonId;
-                return (
-                  <Link key={pl._id} href={`/watch/${pl._id}?playlist=${playlistId}&idx=${i}`}>
-                    <div className={`flex items-center gap-3 rounded-2xl p-3 transition-colors ${isCurrent ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5 hover:bg-white/10'}`}>
-                      <div className={`w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center text-xs font-bold ${isCurrent ? 'text-white' : 'text-gray-500'}`}
-                        style={isCurrent ? { backgroundColor: colors.primary } : { backgroundColor: '#ffffff10' }}>
-                        {isCurrent ? '▶' : i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold leading-tight truncate ${isCurrent ? 'text-white' : 'text-gray-300'}`}>{pl.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{VIDEO_FORMAT_LABELS[pl.videoFormat]}</p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ) : related.length > 0 ? (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Up Next</h2>
-            <div className="space-y-3">
-              {related.map(r => (
-                <Link key={r._id} href={`/watch/${r._id}`}>
-                  <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-3 hover:bg-white/10 transition-colors">
-                    <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: colors.primary + '30' }}>
-                      {VIDEO_FORMAT_ICONS[r.videoFormat]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-semibold leading-tight truncate">{r.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{VIDEO_FORMAT_LABELS[r.videoFormat]}</p>
-                    </div>
-                    {r.durationSeconds && (
-                      <span className="text-xs text-gray-500 flex-shrink-0">{formatDuration(r.durationSeconds)}</span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
+      )}
     </div>
   );
 }
 
 export default function WatchPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-6xl animate-bounce">🌟</div>
-      </div>
-    }>
-      <WatchContent />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-6xl animate-bounce">🌟</div></div>}>
+      <ActivityHubContent />
     </Suspense>
   );
 }

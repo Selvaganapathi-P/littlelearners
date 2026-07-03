@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 import HomePage from '@/components/HomePage';
 
 export const metadata: Metadata = {
-  title: 'LittleLearners — Learn, Play & Grow',
-  description: "India's joyful preschool learning platform. AI-powered songs, phonics, stories, and more for LKG & UKG children aged 3.5–5.5.",
+  title: 'LittleLearners — Interactive Learning for Preschoolers',
+  description: "Quizzes, flashcards, stories & matching games for LKG & UKG children aged 3.5–5.5. Earn XP, coins & trophies while learning!",
   openGraph: {
-    title: 'LittleLearners — Joyful Preschool Learning',
-    description: 'AI-powered videos for LKG & UKG children. Rhymes, phonics, stories, dance & more.',
+    title: 'LittleLearners — Interactive Preschool Learning',
+    description: 'Quizzes, flashcards, stories & matching games for LKG & UKG children. Gamified learning with XP, coins & achievements.',
     type: 'website',
   },
 };

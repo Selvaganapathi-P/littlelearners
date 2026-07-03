@@ -42,7 +42,7 @@ function DashboardContent() {
   const [tagFilter, setTagFilter] = useState<string | null>(() => null);
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
   const [continueWatching, setContinueWatching] = useState<{ lesson: Lesson; completedPercent: number }[]>([]);
-  const [childInfo, setChildInfo] = useState<{ name: string; avatar: string; streak: number; totalWatched: number } | null>(null);
+  const [childInfo, setChildInfo] = useState<{ name: string; avatar: string; streak: number; totalWatched: number; xp: number; coins: number; level: number } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus search or set tag filter from URL params
@@ -76,6 +76,9 @@ function DashboardContent() {
             avatar: child.avatar,
             streak: child.streaks.current,
             totalWatched: child.watchHistory.length,
+            xp: child.xp ?? 0,
+            coins: child.coins ?? 0,
+            level: child.level ?? 1,
           });
 
           const ids = new Set(child.watchHistory.map(h =>
@@ -184,19 +187,30 @@ function DashboardContent() {
         {/* Child stats bar */}
         {childInfo && (
           <div className="flex items-center gap-3 mb-6 p-3 bg-white rounded-2xl card-shadow-sm">
-            <span className="text-3xl">{childInfo.avatar}</span>
+            <div className="relative flex-shrink-0">
+              <span className="text-3xl">{childInfo.avatar}</span>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-xs font-black text-gray-900">
+                {childInfo.level}
+              </span>
+            </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-gray-800 text-sm truncate">{childInfo.name}</p>
+              <p className="text-xs text-gray-400">Level {childInfo.level}</p>
             </div>
-            <div className="flex items-center gap-3 text-center">
+            <div className="flex items-center gap-2 text-center">
               <div>
-                <div className="text-lg font-display" style={{ color: colors.primary }}>{childInfo.streak}🔥</div>
+                <div className="text-base font-bold" style={{ color: colors.primary }}>{childInfo.streak}🔥</div>
                 <div className="text-xs text-gray-400">streak</div>
               </div>
-              <div className="w-px h-8 bg-gray-100" />
+              <div className="w-px h-6 bg-gray-100" />
               <div>
-                <div className="text-lg font-display" style={{ color: colors.primary }}>{childInfo.totalWatched}</div>
-                <div className="text-xs text-gray-400">watched</div>
+                <div className="text-base font-bold text-yellow-500">⭐{childInfo.xp}</div>
+                <div className="text-xs text-gray-400">XP</div>
+              </div>
+              <div className="w-px h-6 bg-gray-100" />
+              <div>
+                <div className="text-base font-bold text-amber-500">🪙{childInfo.coins}</div>
+                <div className="text-xs text-gray-400">coins</div>
               </div>
             </div>
           </div>
@@ -208,7 +222,7 @@ function DashboardContent() {
             ref={searchInputRef}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            placeholder="Search for a video…"
+            placeholder="Search for a lesson…"
             className="flex-1 bg-white border-2 border-gray-100 rounded-2xl px-4 py-2.5 text-sm font-semibold focus:outline-none transition-colors"
             style={{ '--tw-ring-color': colors.primary } as React.CSSProperties}
             onFocus={e => { e.currentTarget.style.borderColor = colors.primary; }}
@@ -250,7 +264,7 @@ function DashboardContent() {
         {/* Continue Watching */}
         {!activeFormat && !search && continueWatching.length > 0 && (
           <section className="mb-10">
-            <h2 className="text-2xl mb-4" style={{ color: colors.primary }}>▶ Continue Watching</h2>
+            <h2 className="text-2xl mb-4" style={{ color: colors.primary }}>▶ Continue Learning</h2>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {continueWatching.map(({ lesson, completedPercent }) => (
                 <Link key={lesson._id} href={`/watch/${lesson._id}`} className="flex-shrink-0 w-44">
@@ -317,7 +331,7 @@ function DashboardContent() {
                   ? `🏷 #${tagFilter}`
                   : activeFormat
                     ? `${VIDEO_FORMAT_ICONS[activeFormat]} ${VIDEO_FORMAT_LABELS[activeFormat]}`
-                    : '🎬 All Videos'}
+                    : '📚 All Lessons'}
             </h2>
             {tagFilter && (
               <button onClick={() => setTagFilter(null)}
@@ -342,8 +356,8 @@ function DashboardContent() {
             </div>
           ) : lessons.length === 0 ? (
             <div className="text-center py-20 text-gray-400">
-              <div className="text-6xl mb-4">🎬</div>
-              <p className="text-lg font-semibold">Videos coming soon!</p>
+              <div className="text-6xl mb-4">📚</div>
+              <p className="text-lg font-semibold">Lessons coming soon!</p>
               <p className="text-sm mt-1">Check back after your teacher creates some lessons.</p>
             </div>
           ) : (

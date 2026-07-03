@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { lessonsApi, videoApi, subjectsApi } from '@/lib/api';
+import { lessonsApi, videoApi, subjectsApi, activitiesApi } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
-import { Lesson, Subject, VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS } from '@/types';
+import { Lesson, Subject, Activity, VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS, ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormatBadge } from '@/components/ui/FormatBadge';
 
@@ -32,6 +32,16 @@ export default function LessonDetailPage() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatingScript, setGeneratingScript] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  useEffect(() => {
+    (activitiesApi.forLesson(id) as Promise<{ data: Activity[] }>)
+      .then(res => setActivities(res.data))
+      .catch(() => {})
+      .finally(() => setActivitiesLoaded(true));
+  }, [id]);
 
   useEffect(() => {
     subjectsApi.list()
@@ -146,6 +156,19 @@ export default function LessonDetailPage() {
       toast('Simulate failed', 'error');
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleRegenerateActivities() {
+    setRegenerating(true);
+    try {
+      const res = await activitiesApi.regenerate(id) as { data: Activity[] };
+      setActivities(res.data);
+      toast('✨ Activities regenerated!', 'success');
+    } catch {
+      toast('Failed to regenerate activities', 'error');
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -394,6 +417,52 @@ export default function LessonDetailPage() {
               </>
             )}
             <p className="text-xs text-gray-400 mt-1">Tags help the auto-compilation engine group lessons (4+ lessons with the same tag → auto-compilation).</p>
+          </div>
+
+          {/* Activities section */}
+          <div className="bg-white rounded-3xl p-5 card-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Interactive Activities</p>
+                <p className="text-xs text-gray-400 mt-0.5">Auto-generated from this lesson&apos;s script and tags</p>
+              </div>
+              <button
+                onClick={handleRegenerateActivities}
+                disabled={regenerating}
+                className="flex items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-bold hover:bg-purple-200 disabled:opacity-50 transition-colors"
+              >
+                {regenerating ? '⏳ Regenerating…' : '🔄 Regenerate'}
+              </button>
+            </div>
+
+            {!activitiesLoaded ? (
+              <div className="text-center py-4 text-gray-300 text-sm animate-pulse">Loading activities…</div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-6 text-gray-400">
+                <div className="text-3xl mb-2">📚</div>
+                <p className="text-sm">No activities yet — click Regenerate to auto-create from this lesson.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {activities.map(act => {
+                  const count =
+                    act.type === 'quiz' ? (act.content.questions?.length ?? 0) :
+                    act.type === 'flashcard' ? (act.content.cards?.length ?? 0) :
+                    act.type === 'story' ? (act.content.pages?.length ?? 0) :
+                    act.type === 'matching' ? (act.content.pairs?.length ?? 0) : 0;
+                  return (
+                    <div key={act._id} className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3">
+                      <div className="text-2xl">{ACTIVITY_ICONS[act.type]}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-700">{ACTIVITY_LABELS[act.type]}</p>
+                        <p className="text-xs text-gray-400">{count} {act.type === 'story' ? 'pages' : act.type === 'quiz' ? 'questions' : act.type === 'matching' ? 'pairs' : 'cards'}</p>
+                      </div>
+                      <span className="text-xs text-yellow-600 font-bold">+{act.xpReward}XP</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

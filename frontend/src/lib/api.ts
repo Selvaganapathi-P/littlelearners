@@ -118,3 +118,21 @@ export const videoApi = {
   simulate: (lessonId: string) => api.post(`/video/simulate/${lessonId}`, {}),
   templates: () => api.get('/video/formats/templates'),
 };
+
+// Activities
+export const activitiesApi = {
+  forLesson: (lessonId: string) => api.get(`/activities?lesson=${lessonId}`),
+  get: (id: string) => api.get(`/activities/${id}`),
+  create: (body: unknown) => api.post('/activities', body),
+  update: (id: string, body: unknown) => api.put(`/activities/${id}`, body),
+  delete: (id: string) => api.delete(`/activities/${id}`),
+  submit: (id: string, childId: string, answers: number[]) =>
+    api.post(`/activities/${id}/submit`, { childId, answers }),
+  regenerate: (lessonId: string) => api.post(`/activities/lesson/${lessonId}/regenerate`, {}),
+};
+
+// Achievements
+export const achievementsApi = {
+  list: () => api.get('/achievements'),
+  forChild: (childId: string) => api.get(`/achievements/child/${childId}`),
+};

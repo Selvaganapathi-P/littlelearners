@@ -20,19 +20,19 @@ const FLOATERS = [
 ];
 
 const FEATURES = [
-  { icon: '🎤', title: 'Sing-Along Rhymes',      desc: 'Word-by-word karaoke highlighting for classic nursery rhymes', color: '#FF6B9D', bg: '#FFF0F5' },
-  { icon: '🔤', title: 'Phonics Songs',           desc: 'A-Z letter sounds set to simple, catchy melodies',           color: '#7C3AED', bg: '#F5F0FF' },
-  { icon: '📖', title: 'Moral Stories',           desc: 'Short fables with a positively-framed lesson every time',    color: '#10B981', bg: '#F0FFF8' },
-  { icon: '💃', title: 'Dance & Movement',        desc: 'Action songs children follow along — clap, jump, spin!',    color: '#FFB347', bg: '#FFFAF0' },
-  { icon: '🎉', title: 'Festival Specials',       desc: 'Diwali, Christmas, Eid, Pongal — auto-scheduled',           color: '#06B6D4', bg: '#F0FBFF' },
-  { icon: '🧘', title: 'Calm-Down Songs',         desc: 'Gentle breathing and stretch videos for wind-down',         color: '#EC4899', bg: '#FFF0F8' },
+  { icon: '❓', title: 'Smart Quizzes',           desc: 'MCQs with hints, emojis & explanations — auto-generated from every lesson', color: '#FF6B9D', bg: '#FFF0F5' },
+  { icon: '🃏', title: 'Flashcard Decks',         desc: 'Flip-card vocabulary learning with examples for every word',               color: '#7C3AED', bg: '#F5F0FF' },
+  { icon: '📖', title: 'Story Reader',            desc: 'Illustrated page-by-page stories with colourful backgrounds & emojis',    color: '#10B981', bg: '#F0FFF8' },
+  { icon: '🎯', title: 'Matching Games',          desc: 'Word–emoji pair matching to cement memory in a playful way',              color: '#FFB347', bg: '#FFFAF0' },
+  { icon: '🏆', title: 'Trophies & XP',          desc: '16 achievements earned through streaks, perfect scores & milestones',     color: '#06B6D4', bg: '#F0FBFF' },
+  { icon: '⚡', title: 'Daily Challenge',         desc: 'A fresh lesson-based challenge every day to build strong learning habits', color: '#EC4899', bg: '#FFF0F8' },
 ];
 
 const STATS = [
-  { value: 15,  suffix: '',  label: 'Video formats' },
-  { value: 2,   suffix: '',  label: 'Grade levels'  },
-  { value: 100, suffix: '%', label: 'Child-safe'    },
-  { value: '∞', suffix: '',  label: 'Joy'           },
+  { value: 6,   suffix: '',  label: 'Activity types' },
+  { value: 16,  suffix: '',  label: 'Achievements'   },
+  { value: 2,   suffix: '',  label: 'Grade levels'   },
+  { value: 100, suffix: '%', label: 'Child-safe'     },
 ];
 
 function CountUp({ target, suffix, inView }: { target: number; suffix: string; inView: boolean }) {
@@ -131,9 +131,10 @@ export default function HomePage() {
           🌟 LittleLearners
         </motion.span>
         <div className="flex items-center gap-3">
+          <Link href="/pricing"        className="hidden sm:block text-sm font-semibold text-gray-500 hover:text-gray-800">Pricing</Link>
           <Link href="/parent-login"  className="hidden sm:block text-sm font-semibold text-purple-600 hover:underline">Parent Login</Link>
           <Link href="/staff-login"   className="hidden sm:block text-sm font-semibold text-gray-500 hover:text-gray-800">Staff Login</Link>
-          <Link href="/admin-login"   className="text-sm font-semibold text-gray-500 hover:text-gray-800">Admin Login</Link>
+          <Link href="/admin-login"   className="hidden sm:block text-sm font-semibold text-gray-500 hover:text-gray-800">Admin Login</Link>
           <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.96 }}>
             <Link href="/dashboard?grade=LKG"
               className="px-4 py-2 text-white rounded-2xl text-sm font-bold shadow-lg"
@@ -173,14 +174,24 @@ export default function HomePage() {
           Joyful learning for LKG &amp; UKG 🎓
         </motion.p>
         <motion.p
-          className="text-gray-400 font-body mb-12 max-w-xl mx-auto"
+          className="text-gray-400 font-body mb-8 max-w-xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.6 }}
         >
-          AI-powered videos — rhymes, phonics, stories, dance &amp; more —
+          Interactive quizzes, flashcards, stories & matching games —
           built for children aged 3.5 to 5.5 years.
         </motion.p>
+        <motion.div
+          className="flex flex-wrap justify-center gap-2 mb-10 text-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.5 }}
+        >
+          {['❓ Quizzes', '🃏 Flashcards', '📖 Stories', '🎯 Matching', '🏆 Trophies', '⚡ Daily Challenge'].map(f => (
+            <span key={f} className="px-3 py-1.5 bg-white rounded-full font-semibold text-gray-700 shadow-sm border border-gray-100">{f}</span>
+          ))}
+        </motion.div>
 
         {/* Grade cards */}
         <motion.div
@@ -305,10 +316,10 @@ export default function HomePage() {
             style={{ fontFamily: 'var(--font-fredoka)' }}
             variants={fadeUp}
           >
-            Everything a preschooler needs ✨
+            Interactive learning, not passive watching ✨
           </motion.h2>
           <motion.p className="text-center text-gray-400 font-body mb-14" variants={fadeUp}>
-            15 video formats · All generated by AI · All child-safe
+            Every lesson auto-generates 4 activity types · Gamified with XP, coins & trophies · 100% child-safe
           </motion.p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -401,7 +412,9 @@ export default function HomePage() {
         >
           LittleLearners © 2026 · Built for curious little minds 💛
         </motion.p>
-        <div className="flex gap-4 justify-center mt-3">
+        <div className="flex flex-wrap gap-4 justify-center mt-3">
+          <Link href="/pricing"      className="hover:text-gray-600 transition-colors">Pricing</Link>
+          <span>·</span>
           <Link href="/parent-login" className="hover:text-gray-600 transition-colors">Parent Login</Link>
           <span>·</span>
           <Link href="/staff-login"  className="hover:text-gray-600 transition-colors">Staff Login</Link>

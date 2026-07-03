@@ -51,6 +51,8 @@ app.use('/api/calendar', require('./src/routes/calendar'));
 app.use('/api/children', require('./src/routes/children'));
 app.use('/api/schools', require('./src/routes/schools'));
 app.use('/api/video', require('./src/routes/videoGeneration'));
+app.use('/api/activities', require('./src/routes/activities'));
+app.use('/api/achievements', require('./src/routes/achievements'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV }));
 
@@ -61,4 +63,6 @@ app.listen(PORT, () => {
   console.log(`LittleLearners API running on port ${PORT}`);
   const { warmUp } = require('./src/services/videoRenderer');
   warmUp();
+  // Seed default achievements if not already present
+  require('./src/models/Achievement').seedDefaults().catch(err => console.error('[Achievements] Seed error:', err.message));
 });
