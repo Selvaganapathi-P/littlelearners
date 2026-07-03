@@ -369,63 +369,108 @@ export default function FounderPage() {
                   </form>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-200">Staff & Accounts</h2>
-                  <span className="text-sm text-gray-500">{users.length} user{users.length !== 1 ? 's' : ''}</span>
-                </div>
-                {users.length === 0 ? (
-                  <div className="bg-gray-900 rounded-3xl p-10 border border-gray-800 text-center text-gray-500">
-                    <p>No users found — the /auth/users endpoint may require founder role.</p>
-                  </div>
-                ) : (
-                  <div className="bg-gray-900 rounded-3xl border border-gray-800 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-gray-800">
-                        <tr>
-                          {['Name', 'Email', 'Role', 'Joined', ''].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-800">
-                        {users.map(u => (
-                          <tr key={u._id} className={`transition-colors ${u.active === false ? 'opacity-40' : 'hover:bg-gray-800/50'}`}>
-                            <td className="px-4 py-3 font-semibold text-gray-200">{u.name}</td>
-                            <td className="px-4 py-3 text-gray-400 font-body text-xs">{u.email}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                u.role === 'founder' ? 'bg-brand-pink/20 text-brand-pink' :
-                                u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' :
-                                u.role === 'staff' ? 'bg-blue-500/20 text-blue-400' :
-                                'bg-gray-700 text-gray-400'
-                              }`}>
-                                {u.role}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-gray-500 font-body text-xs">
-                              {new Date(u.createdAt).toLocaleDateString('en-IN')}
-                            </td>
-                            <td className="px-4 py-3">
-                              {u.role !== 'founder' && (
-                                <button
-                                  onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
-                                  disabled={togglingUser === u._id}
-                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
-                                    u.active === false
-                                      ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                  }`}
-                                >
-                                  {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                {/* Staff & Admin table */}
+                {(() => {
+                  const staffUsers = users.filter(u => ['founder','admin','staff'].includes(u.role));
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-bold text-gray-200">Staff & Admin</h2>
+                        <span className="text-sm text-gray-500">{staffUsers.length} account{staffUsers.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      {staffUsers.length === 0 ? (
+                        <div className="bg-gray-900 rounded-3xl p-8 border border-gray-800 text-center text-gray-500 text-sm">No staff accounts yet.</div>
+                      ) : (
+                        <div className="bg-gray-900 rounded-3xl border border-gray-800 overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="border-b border-gray-800">
+                              <tr>
+                                {['Name', 'Email', 'Role', 'Joined', ''].map(h => (
+                                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-800">
+                              {staffUsers.map(u => (
+                                <tr key={u._id} className={`transition-colors ${u.active === false ? 'opacity-40' : 'hover:bg-gray-800/50'}`}>
+                                  <td className="px-4 py-3 font-semibold text-gray-200">{u.name}</td>
+                                  <td className="px-4 py-3 text-gray-400 font-body text-xs">{u.email}</td>
+                                  <td className="px-4 py-3">
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                      u.role === 'founder' ? 'bg-brand-pink/20 text-brand-pink' :
+                                      u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' :
+                                      'bg-blue-500/20 text-blue-400'
+                                    }`}>{u.role}</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-500 font-body text-xs">{new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
+                                  <td className="px-4 py-3">
+                                    {u.role !== 'founder' && (
+                                      <button
+                                        onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
+                                        disabled={togglingUser === u._id}
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
+                                          u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                        }`}>
+                                        {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Parents table */}
+                {(() => {
+                  const parents = users.filter(u => u.role === 'parent');
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-bold text-gray-200">Parents</h2>
+                        <span className="text-sm text-gray-500">{parents.length} account{parents.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      {parents.length === 0 ? (
+                        <div className="bg-gray-900 rounded-3xl p-8 border border-gray-800 text-center text-gray-500 text-sm">No parent accounts yet.</div>
+                      ) : (
+                        <div className="bg-gray-900 rounded-3xl border border-gray-800 overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="border-b border-gray-800">
+                              <tr>
+                                {['Name', 'Email', 'Joined', ''].map(h => (
+                                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-800">
+                              {parents.map(u => (
+                                <tr key={u._id} className={`transition-colors ${u.active === false ? 'opacity-40' : 'hover:bg-gray-800/50'}`}>
+                                  <td className="px-4 py-3 font-semibold text-gray-200">{u.name}</td>
+                                  <td className="px-4 py-3 text-gray-400 font-body text-xs">{u.email}</td>
+                                  <td className="px-4 py-3 text-gray-500 font-body text-xs">{new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
+                                  <td className="px-4 py-3">
+                                    <button
+                                      onClick={() => toggleUserActive(u._id, u.name, u.active !== false)}
+                                      disabled={togglingUser === u._id}
+                                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${
+                                        u.active === false ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                      }`}>
+                                      {togglingUser === u._id ? '⏳' : u.active === false ? '✓ Activate' : 'Deactivate'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
