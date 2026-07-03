@@ -137,7 +137,7 @@ export default function ParentDashboard() {
                       <Link href={`/dashboard?grade=${child.grade}&child=${child._id}`}
                         className="px-4 py-2 rounded-2xl text-sm font-bold text-white transition-colors"
                         style={{ backgroundColor: colors.primary }}>
-                        ▶ Watch
+                        📚 Learn
                       </Link>
                     </div>
                   </div>
@@ -148,7 +148,7 @@ export default function ParentDashboard() {
                       <div className="text-2xl font-display" style={{ color: colors.primary }}>
                         {child.watchHistory.length}
                       </div>
-                      <div className="text-xs text-gray-500 font-body mt-0.5">Videos Watched</div>
+                      <div className="text-xs text-gray-500 font-body mt-0.5">Lessons Done</div>
                     </div>
                     <div className="text-center p-3 rounded-2xl" style={{ backgroundColor: colors.bg }}>
                       <div className="text-2xl font-display" style={{ color: colors.primary }}>

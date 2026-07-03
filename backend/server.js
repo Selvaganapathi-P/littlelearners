@@ -1,5 +1,4 @@
 require('dotenv').config();
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -38,9 +37,6 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Serve locally rendered videos and thumbnails (fallback when Cloudinary not configured)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Routes
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/grades', require('./src/routes/grades'));
@@ -50,7 +46,6 @@ app.use('/api/compilations', require('./src/routes/compilations'));
 app.use('/api/calendar', require('./src/routes/calendar'));
 app.use('/api/children', require('./src/routes/children'));
 app.use('/api/schools', require('./src/routes/schools'));
-app.use('/api/video', require('./src/routes/videoGeneration'));
 app.use('/api/activities', require('./src/routes/activities'));
 app.use('/api/achievements', require('./src/routes/achievements'));
 
@@ -61,8 +56,6 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`LittleLearners API running on port ${PORT}`);
-  const { warmUp } = require('./src/services/videoRenderer');
-  warmUp();
   // Seed default achievements if not already present
   require('./src/models/Achievement').seedDefaults().catch(err => console.error('[Achievements] Seed error:', err.message));
 });

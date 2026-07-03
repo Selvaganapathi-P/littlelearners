@@ -171,16 +171,16 @@ export default function ChildProfilePage() {
           )}
         </section>
 
-        {/* Watch History */}
+        {/* Activity History */}
         <section>
-          <h2 className="text-xl font-display mb-4" style={{ color: colors.primary }}>Recently Watched</h2>
+          <h2 className="text-xl font-display mb-4" style={{ color: colors.primary }}>Activity History</h2>
           {child.watchHistory.length === 0 ? (
             <div className="bg-white rounded-3xl p-6 text-center text-gray-400 card-shadow-sm">
-              <div className="text-4xl mb-2">🎬</div>
-              <p className="text-sm">No videos watched yet.</p>
+              <div className="text-4xl mb-2">📚</div>
+              <p className="text-sm">No lessons done yet.</p>
               <Link href={`/dashboard?grade=${child.grade}`}
                 className="text-sm mt-2 inline-block font-semibold" style={{ color: colors.primary }}>
-                Start watching →
+                Start learning →
               </Link>
             </div>
           ) : (
@@ -223,7 +223,7 @@ export default function ChildProfilePage() {
           <Link href={`/dashboard?grade=${child.grade}`}
             className="inline-block px-8 py-4 text-white rounded-3xl font-bold text-lg card-shadow"
             style={{ backgroundColor: colors.primary }}>
-            Watch More Videos 🎬
+            Explore Lessons 📚
           </Link>
         </div>
       </div>

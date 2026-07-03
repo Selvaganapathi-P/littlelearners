@@ -238,9 +238,9 @@ export default function CompilationsPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-5 min-h-0">
               {/* Current lessons */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 mb-2">Current videos (drag to reorder)</h3>
+                <h3 className="text-sm font-semibold text-gray-500 mb-2">Current lessons (drag to reorder)</h3>
                 {editLessons.length === 0 ? (
-                  <p className="text-sm text-gray-400 font-body">No videos yet — add some below.</p>
+                  <p className="text-sm text-gray-400 font-body">No lessons yet — add some below.</p>
                 ) : (
                   <div className="space-y-2">
                     {editLessons.map((l, idx) => (

@@ -90,7 +90,7 @@ export default function ProgressReportPage() {
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Videos Watched', value: totalWatched, icon: '🎬', color: colors.primary },
+            { label: 'Lessons Done', value: totalWatched, icon: '📚', color: colors.primary },
             { label: 'Completed', value: `${completionRate}%`, icon: '✅', color: '#10B981' },
             { label: 'Day Streak', value: `${child.streaks?.current ?? 0}🔥`, icon: '', color: '#F59E0B' },
             { label: 'Badges', value: child.badges?.length ?? 0, icon: '🏅', color: '#7C3AED' },

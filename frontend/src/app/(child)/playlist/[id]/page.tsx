@@ -6,8 +6,6 @@ import Link from 'next/link';
 import type { ThemedCompilation } from '@/types';
 import { VIDEO_FORMAT_ICONS, VIDEO_FORMAT_LABELS } from '@/types';
 import { compilationsApi } from '@/lib/api';
-import { formatDuration } from '@/lib/utils';
-
 export default function PlaylistPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -40,14 +38,14 @@ export default function PlaylistPage() {
         </button>
         <div className="text-5xl mb-3">📋</div>
         <h1 className="text-3xl mb-1">{playlist.title}</h1>
-        <p className="text-white/80 font-body text-sm mb-6">{playlist.lessons.length} videos</p>
+        <p className="text-white/80 font-body text-sm mb-6">{playlist.lessons.length} lessons</p>
 
         {firstLesson && (
           <Link
             href={`/watch/${firstLesson._id}?playlist=${id}&idx=0`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-white text-brand-pink rounded-2xl font-bold text-sm hover:bg-white/90 transition-colors shadow-md"
           >
-            ▶ Play All
+            📚 Start Activities
           </Link>
         )}
       </div>
@@ -68,9 +66,6 @@ export default function PlaylistPage() {
                 <span className="text-xs text-gray-400 font-body bg-gray-50 px-2 py-1 rounded-full">
                   #{index + 1}
                 </span>
-                {lesson.durationSeconds && (
-                  <p className="text-xs text-gray-400 mt-1">{formatDuration(lesson.durationSeconds)}</p>
-                )}
               </div>
             </div>
           </Link>

@@ -112,13 +112,6 @@ export const childrenApi = {
     api.patch(`/children/${childId}/watch`, { lessonId, completedPercent }),
 };
 
-// Video generation
-export const videoApi = {
-  generate: (lessonId: string) => api.post(`/video/generate/${lessonId}`, {}),
-  simulate: (lessonId: string) => api.post(`/video/simulate/${lessonId}`, {}),
-  templates: () => api.get('/video/formats/templates'),
-};
-
 // Activities
 export const activitiesApi = {
   forLesson: (lessonId: string) => api.get(`/activities?lesson=${lessonId}`),

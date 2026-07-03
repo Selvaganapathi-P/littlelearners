@@ -123,7 +123,7 @@ export default function StaffDashboard() {
             <table className="w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50">
                 <tr>
-                  {['Student', 'Grade', 'Videos Watched', 'Streak', 'Badges', 'Action'].map(h => (
+                  {['Student', 'Grade', 'Lessons Done', 'Streak', 'Badges', 'Action'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>

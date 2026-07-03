@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { lessonsApi, videoApi, subjectsApi, activitiesApi } from '@/lib/api';
+import { lessonsApi, subjectsApi, activitiesApi } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
-import { Lesson, Subject, Activity, VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS, ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
+import { Lesson, Subject, Activity, VIDEO_FORMAT_LABELS, ACTIVITY_ICONS, ACTIVITY_LABELS } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormatBadge } from '@/components/ui/FormatBadge';
 
@@ -13,8 +13,6 @@ const EMPTY: Partial<Lesson> & { subjectId?: string } = {
   title: '',
   scriptText: '',
   tags: [],
-  videoUrl: '',
-  thumbnailUrl: '',
   subjectId: '',
 };
 
@@ -30,8 +28,6 @@ export default function LessonDetailPage() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [generatingScript, setGeneratingScript] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -59,8 +55,6 @@ export default function LessonDetailPage() {
           title: data.title,
           scriptText: data.scriptText || '',
           tags: [...data.tags],
-          videoUrl: data.videoUrl || '',
-          thumbnailUrl: data.thumbnailUrl || '',
           subjectId: typeof data.subject === 'object' && data.subject !== null
             ? (data.subject as Subject)._id
             : (data.subject as string) || '',
@@ -70,22 +64,6 @@ export default function LessonDetailPage() {
       .finally(() => setLoading(false));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll every 8s while status is 'generating'
-  useEffect(() => {
-    if (lesson?.status !== 'generating') return;
-    const interval = setInterval(() => {
-      lessonsApi.get(id).then((res: unknown) => {
-        const r = res as { data?: Lesson };
-        const data = r.data ?? (res as Lesson);
-        if (data.status !== 'generating') {
-          setLesson(data);
-          toast(data.status === 'ready' ? '🎉 Video is ready!' : `Status: ${data.status}`, 'success');
-          clearInterval(interval);
-        }
-      }).catch(() => {});
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [lesson?.status, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSave() {
     if (!form.title?.trim()) { toast('Title is required', 'warning'); return; }
@@ -114,48 +92,6 @@ export default function LessonDetailPage() {
       toast('Failed to publish', 'error');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleGenerate() {
-    setGenerating(true);
-    try {
-      await videoApi.generate(id);
-      toast('Video generation queued ✨', 'info');
-      setLesson(prev => prev ? { ...prev, status: 'generating' } : prev);
-    } catch {
-      toast('Failed to queue generation', 'error');
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function handleGenerateScript() {
-    if (!form.title?.trim()) { toast('Add a title first', 'warning'); return; }
-    setGeneratingScript(true);
-    try {
-      const res = await lessonsApi.generateScript(id) as { data: { scriptText: string } };
-      setForm(f => ({ ...f, scriptText: res.data.scriptText }));
-      toast('✨ Script generated! Review and edit before saving.', 'success');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to generate script';
-      toast(msg.includes('not configured') ? 'AI script generation not enabled on this server' : 'Generation failed — try again', 'error');
-    } finally {
-      setGeneratingScript(false);
-    }
-  }
-
-  async function handleSimulate() {
-    setGenerating(true);
-    try {
-      const res = await videoApi.simulate(id) as { data: Lesson };
-      const updated = res.data ?? (res as unknown as Lesson);
-      setLesson(updated);
-      toast('Simulation complete — video marked ready ⚡', 'success');
-    } catch {
-      toast('Simulate failed', 'error');
-    } finally {
-      setGenerating(false);
     }
   }
 
@@ -240,10 +176,8 @@ export default function LessonDetailPage() {
     );
   }
 
-  const canPublish = lesson.status === 'ready';
+  const canPublish = lesson.status === 'draft' || lesson.status === 'ready';
   const canUnpublish = lesson.status === 'published';
-  const canGenerate = lesson.status === 'draft' || lesson.status === 'ready';
-  const canSimulate = lesson.status === 'generating' || lesson.status === 'draft';
   const isArchived = lesson.status === 'archived';
 
   return (
@@ -272,25 +206,6 @@ export default function LessonDetailPage() {
 
         {/* Action buttons */}
         <div className="flex gap-2 flex-wrap">
-          {canGenerate && (
-            <button
-              onClick={handleGenerate}
-              disabled={generating || isArchived}
-              className="px-4 py-2 bg-brand-purple text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {generating ? '⏳ Queuing…' : `${VIDEO_FORMAT_ICONS[lesson.videoFormat]} Generate`}
-            </button>
-          )}
-          {canSimulate && (
-            <button
-              onClick={handleSimulate}
-              disabled={generating}
-              title="Skip Remotion pipeline — mark ready with placeholder video (dev/staging)"
-              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors"
-            >
-              {generating ? '⏳…' : '⚡ Simulate'}
-            </button>
-          )}
           {canPublish && (
             <button
               onClick={handlePublish}
@@ -344,29 +259,13 @@ export default function LessonDetailPage() {
           <div className="bg-white rounded-3xl p-5 card-shadow">
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-semibold text-gray-600">Script / Narration</label>
-              {!isArchived && (
-                <button
-                  onClick={handleGenerateScript}
-                  disabled={generatingScript || isArchived}
-                  title="Generate script with AI (requires OPENAI_API_KEY on server)"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-purple to-brand-pink text-white rounded-xl text-xs font-bold hover:opacity-90 disabled:opacity-50 transition-all"
-                >
-                  {generatingScript ? (
-                    <>
-                      <span className="animate-spin inline-block">⏳</span> Generating…
-                    </>
-                  ) : (
-                    <>✨ AI Script</>
-                  )}
-                </button>
-              )}
             </div>
             <textarea
               value={form.scriptText}
               onChange={e => setForm(f => ({ ...f, scriptText: e.target.value }))}
               disabled={isArchived}
               rows={12}
-              placeholder="Write the script here — or click ✨ AI Script to generate one automatically…"
+              placeholder="Write the lesson script here — used to auto-generate Story, Quiz, Flashcard and Matching activities…"
               className="w-full text-sm font-body text-gray-700 resize-y border border-gray-100 rounded-xl p-3 focus:border-brand-pink outline-none transition-colors bg-gray-50/50 leading-relaxed"
             />
             <p className="text-xs text-gray-400 mt-1">
@@ -468,37 +367,6 @@ export default function LessonDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-5">
-          {/* Video preview */}
-          <div className="bg-white rounded-3xl p-5 card-shadow">
-            <p className="text-sm font-semibold text-gray-600 mb-3">Video Preview</p>
-            {lesson.videoUrl ? (
-              <video controls src={lesson.videoUrl} className="w-full rounded-2xl bg-black aspect-video" />
-            ) : (
-              <div className="aspect-video rounded-2xl bg-gradient-to-br from-pink-50 to-purple-50 flex flex-col items-center justify-center text-gray-300 gap-2">
-                <span className="text-4xl">{VIDEO_FORMAT_ICONS[lesson.videoFormat]}</span>
-                <span className="text-xs">No video yet</span>
-              </div>
-            )}
-            <div className="mt-3 space-y-2">
-              <label className="block text-xs font-semibold text-gray-500">Video URL</label>
-              <input
-                value={form.videoUrl}
-                onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
-                disabled={isArchived}
-                placeholder="https://…"
-                className="text-xs border border-gray-200 rounded-xl px-3 py-2 w-full focus:border-brand-pink outline-none"
-              />
-              <label className="block text-xs font-semibold text-gray-500">Thumbnail URL</label>
-              <input
-                value={form.thumbnailUrl}
-                onChange={e => setForm(f => ({ ...f, thumbnailUrl: e.target.value }))}
-                disabled={isArchived}
-                placeholder="https://…"
-                className="text-xs border border-gray-200 rounded-xl px-3 py-2 w-full focus:border-brand-pink outline-none"
-              />
-            </div>
-          </div>
-
           {/* Subject selector */}
           {subjects.length > 0 && !isArchived && (
             <div className="bg-white rounded-3xl p-5 card-shadow">
@@ -534,12 +402,6 @@ export default function LessonDetailPage() {
                   {subjects.find(s => s._id === form.subjectId)?.name ?? lesson.subject?.name ?? '—'}
                 </dd>
               </div>
-              {lesson.durationSeconds && (
-                <div className="flex justify-between">
-                  <dt className="text-gray-400">Duration</dt>
-                  <dd className="text-gray-700 font-semibold">{Math.floor(lesson.durationSeconds / 60)}:{String(lesson.durationSeconds % 60).padStart(2, '0')}</dd>
-                </div>
-              )}
               <div className="flex justify-between">
                 <dt className="text-gray-400">Created</dt>
                 <dd className="text-gray-700 font-semibold">{new Date(lesson.createdAt).toLocaleDateString('en-IN')}</dd>

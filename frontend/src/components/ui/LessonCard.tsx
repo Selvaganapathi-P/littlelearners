@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Lesson } from '@/types';
 import { VIDEO_FORMAT_ICONS, VIDEO_FORMAT_LABELS } from '@/types';
-import { cn, formatDuration } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { StatusBadge } from './StatusBadge';
 
 interface LessonCardProps {
@@ -21,11 +21,6 @@ export function LessonCard({ lesson, mode = 'child', grade, className }: LessonC
         {/* Thumbnail */}
         <div className="h-28 flex items-center justify-center text-5xl relative" style={{ backgroundColor: gradeColor + '18' }}>
           {VIDEO_FORMAT_ICONS[lesson.videoFormat]}
-          {lesson.durationSeconds && (
-            <span className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-lg">
-              {formatDuration(lesson.durationSeconds)}
-            </span>
-          )}
           {mode === 'staff' && (
             <span className="absolute top-2 right-2">
               <StatusBadge status={lesson.status} />

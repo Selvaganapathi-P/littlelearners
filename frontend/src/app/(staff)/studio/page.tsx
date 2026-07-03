@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Grade, VideoFormat, Subject, Lesson } from '@/types';
 import { VIDEO_FORMAT_LABELS, VIDEO_FORMAT_ICONS } from '@/types';
-import { lessonsApi, videoApi, subjectsApi } from '@/lib/api';
+import { lessonsApi, subjectsApi } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
 
 const GRADES: Grade[] = ['LKG', 'UKG'];
@@ -79,13 +79,7 @@ export default function StudioPage() {
       const newId = res.data._id;
       setCreatedId(newId);
 
-      if (form.scriptText.trim()) {
-        toast('Lesson created — queuing video generation…', 'info');
-        await videoApi.generate(newId);
-        toast('Video generation queued ✨');
-      } else {
-        toast('Draft saved!');
-      }
+      toast('Lesson created — activities will be auto-generated when accessed ✨');
       setStep('done');
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Something went wrong', 'error');
@@ -99,7 +93,7 @@ export default function StudioPage() {
       <div className="text-7xl">🎉</div>
       <h2 className="text-3xl text-brand-pink">Lesson Created!</h2>
       <p className="text-gray-500 font-body max-w-sm">
-        {form.scriptText ? "Video generation is queued — check the lesson to see when it's ready." : 'Draft saved. Add a script to generate the video.'}
+        Activities will be auto-generated when a child first opens the lesson.
       </p>
       <div className="flex flex-wrap gap-3 justify-center">
         <button onClick={() => { setForm(EMPTY); setStep('form'); setCreatedId(''); }}
@@ -142,7 +136,7 @@ export default function StudioPage() {
         {stats?.topLessons && stats.topLessons.length > 0 && (
           <div className="mb-8 bg-white rounded-3xl p-5 card-shadow">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-gray-700">Top Videos</h2>
+              <h2 className="text-sm font-bold text-gray-700">Top Lessons</h2>
               <Link href="/studio/lessons?status=published" className="text-xs text-brand-pink hover:underline">All →</Link>
             </div>
             <div className="space-y-2">
@@ -241,7 +235,7 @@ export default function StudioPage() {
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
               Script / Lyrics
-              <span className="font-normal text-gray-400 ml-1 text-xs">(required for video generation)</span>
+              <span className="font-normal text-gray-400 ml-1 text-xs">(used to auto-generate activities)</span>
             </label>
             <textarea
               rows={7}

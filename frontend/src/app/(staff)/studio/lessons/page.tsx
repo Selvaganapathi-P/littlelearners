@@ -7,12 +7,12 @@ import type { Lesson, VideoFormat, Grade } from '@/types';
 import { VIDEO_FORMAT_LABELS } from '@/types';
 import { LessonCard } from '@/components/ui/LessonCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { lessonsApi, videoApi } from '@/lib/api';
+import { lessonsApi } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
 import { formatDate } from '@/lib/utils';
 
 const GRADE_OPTIONS: Array<Grade | 'all'> = ['all', 'LKG', 'UKG'];
-const STATUS_OPTIONS = ['all', 'draft', 'generating', 'ready', 'published', 'archived'] as const;
+const STATUS_OPTIONS = ['all', 'draft', 'ready', 'published', 'archived'] as const;
 
 function LessonsManageContent() {
   const params = useSearchParams();
@@ -49,26 +49,10 @@ function LessonsManageContent() {
 
   useEffect(() => { fetchLessons(); }, [fetchLessons]);
 
-  // Auto-refresh every 8s while any lesson is generating
-  useEffect(() => {
-    const hasGenerating = lessons.some(l => l.status === 'generating');
-    if (!hasGenerating) return;
-    const t = setInterval(fetchLessons, 8000);
-    return () => clearInterval(t);
-  }, [lessons, fetchLessons]);
-
   const publish = async (id: string) => {
     setActionLoading(id + '_publish');
     try {
       await lessonsApi.publish(id);
-      await fetchLessons();
-    } finally { setActionLoading(null); }
-  };
-
-  const generateVideo = async (id: string) => {
-    setActionLoading(id + '_gen');
-    try {
-      await videoApi.generate(id);
       await fetchLessons();
     } finally { setActionLoading(null); }
   };
@@ -247,24 +231,12 @@ function LessonsManageContent() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <StatusBadge status={lesson.status} />
-                      {lesson.status === 'generating' && (
-                        <span className="inline-block w-3 h-3 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
-                      )}
-                    </div>
+                    <StatusBadge status={lesson.status} />
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">{formatDate(lesson.createdAt)}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-end">
-                      {lesson.status === 'draft' && lesson.scriptText && (
-                        <button onClick={() => generateVideo(lesson._id)}
-                          disabled={actionLoading === lesson._id + '_gen'}
-                          className="px-2.5 py-1 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors disabled:opacity-50">
-                          {actionLoading === lesson._id + '_gen' ? '…' : '⚙️ Generate'}
-                        </button>
-                      )}
-                      {lesson.status === 'ready' && (
+                      {(lesson.status === 'draft' || lesson.status === 'ready') && (
                         <button onClick={() => publish(lesson._id)}
                           disabled={actionLoading === lesson._id + '_publish'}
                           className="px-2.5 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors disabled:opacity-50">
@@ -277,7 +249,7 @@ function LessonsManageContent() {
                       </Link>
                       <Link href={`/watch/${lesson._id}`}
                         className="px-2.5 py-1 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors">
-                        Watch
+                        Preview
                       </Link>
                     </div>
                   </td>

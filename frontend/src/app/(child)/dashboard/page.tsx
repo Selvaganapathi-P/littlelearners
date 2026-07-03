@@ -8,7 +8,7 @@ import { VIDEO_FORMAT_ICONS, VIDEO_FORMAT_LABELS } from '@/types';
 import { lessonsApi, compilationsApi, childrenApi } from '@/lib/api';
 import type { Child } from '@/types';
 import { ChildNav } from '@/components/ChildNav';
-import { formatDuration, getGradeColor } from '@/lib/utils';
+import { getGradeColor } from '@/lib/utils';
 
 const PAGE_SIZE = 16;
 
@@ -271,10 +271,7 @@ function DashboardContent() {
                   <div className="bg-white rounded-2xl overflow-hidden card-shadow hover:scale-105 transition-transform">
                     <div className="h-24 flex items-center justify-center text-3xl relative overflow-hidden"
                       style={{ backgroundColor: colors.secondary + '22' }}>
-                      {lesson.thumbnailUrl ? (
-                        <img src={lesson.thumbnailUrl} alt={lesson.title} className="w-full h-full object-cover absolute inset-0" />
-                      ) : null}
-                      <span className={lesson.thumbnailUrl ? 'relative z-10' : ''}>{VIDEO_FORMAT_ICONS[lesson.videoFormat]}</span>
+                      <span>{VIDEO_FORMAT_ICONS[lesson.videoFormat]}</span>
                     </div>
                     {/* Progress bar */}
                     <div className="h-1 bg-gray-100">
@@ -297,21 +294,16 @@ function DashboardContent() {
             <h2 className="text-2xl mb-4" style={{ color: colors.primary }}>🎶 Playlists</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {compilations.map(comp => {
-                const firstLesson = comp.lessons[0] as Lesson | undefined;
-                const thumb = firstLesson?.thumbnailUrl;
                 return (
                   <Link key={comp._id} href={`/playlist/${comp._id}`}>
                     <div className="bg-white rounded-3xl overflow-hidden card-shadow hover:scale-105 transition-transform">
-                      <div className="h-28 flex items-center justify-center text-5xl relative overflow-hidden"
+                      <div className="h-28 flex items-center justify-center text-5xl"
                         style={{ backgroundColor: colors.secondary + '33' }}>
-                        {thumb ? (
-                          <img src={thumb} alt={comp.title} className="w-full h-full object-cover absolute inset-0" />
-                        ) : null}
-                        <span className={thumb ? 'relative z-10 bg-black/40 rounded-full p-1.5 text-2xl' : ''}>📋</span>
+                        <span>📋</span>
                       </div>
                       <div className="p-3">
                         <p className="font-bold text-gray-800 text-sm leading-tight">{comp.title}</p>
-                        <p className="text-xs text-gray-400 mt-1">{comp.lessons.length} videos</p>
+                        <p className="text-xs text-gray-400 mt-1">{comp.lessons.length} lessons</p>
                       </div>
                     </div>
                   </Link>
@@ -370,17 +362,7 @@ function DashboardContent() {
                       <div className="bg-white rounded-3xl overflow-hidden card-shadow hover:scale-105 transition-transform cursor-pointer"
                         style={watched ? { outline: `2px solid ${colors.primary}`, outlineOffset: '2px' } : {}}>
                         <div className="h-28 flex items-center justify-center text-5xl relative overflow-hidden" style={{ backgroundColor: colors.secondary + '22' }}>
-                          {lesson.thumbnailUrl ? (
-                            <img src={lesson.thumbnailUrl} alt={lesson.title} className="w-full h-full object-cover absolute inset-0" />
-                          ) : null}
-                          <span className={lesson.thumbnailUrl ? 'relative z-10 bg-black/30 rounded-full p-1' : ''}>
-                            {VIDEO_FORMAT_ICONS[lesson.videoFormat]}
-                          </span>
-                          {lesson.durationSeconds && (
-                            <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-md z-10">
-                              {formatDuration(lesson.durationSeconds)}
-                            </span>
-                          )}
+                          <span>{VIDEO_FORMAT_ICONS[lesson.videoFormat]}</span>
                           {watched && (
                             <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full z-10 font-bold">
                               ✓
