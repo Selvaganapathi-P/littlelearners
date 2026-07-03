@@ -420,7 +420,7 @@ export default function AdminPage() {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="bg-gradient-to-r from-brand-purple/5 to-transparent px-6 py-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-700">Create New Account</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Add a staff member or admin to the platform</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Add a staff, admin, or parent account to the platform</p>
                   </div>
                   <form onSubmit={handleCreateUser} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
