@@ -23,7 +23,7 @@ export default function RegisterPage() {
     setError('');
 
     if (!name.trim()) { setError('Please enter your name'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match'); return; }
 
     setLoading(true);
@@ -89,7 +89,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 font-body focus:border-brand-purple outline-none transition-colors"
             />
           </div>
