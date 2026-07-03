@@ -409,8 +409,6 @@ export default function HomePage() {
           <Link href="/admin-login"  className="hover:text-gray-600 transition-colors">Admin Login</Link>
           <span>·</span>
           <Link href="/founder"  className="hover:text-gray-600 transition-colors">About Founder</Link>
-          <span>·</span>
-          <Link href="/admin"    className="hover:text-gray-600 transition-colors">Admin</Link>
         </div>
       </footer>
     </main>
