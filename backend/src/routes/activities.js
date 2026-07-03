@@ -42,6 +42,22 @@ function autoGenerateActivities(lesson) {
   const pairs = tags.slice(0, 6).map(t => ({ word: t, emoji: tagEmoji(t) }));
   if (pairs.length >= 3) activities.push({ type: 'matching', title: `🎯 ${title} — Match It`, content: { pairs } });
 
+  // ── Memory Game (duplicate emoji pairs, shuffle) ──────────────────────────
+  if (pairs.length >= 3) {
+    const memPairs = pairs.slice(0, 6);
+    const memoryCards = [
+      ...memPairs.map((p, i) => ({ id: `a${i}`, emoji: p.emoji, pairId: String(i) })),
+      ...memPairs.map((p, i) => ({ id: `b${i}`, emoji: p.emoji, pairId: String(i) })),
+    ].sort(() => Math.random() - 0.5);
+    activities.push({ type: 'memory', title: `🧠 ${title} — Memory`, content: { memoryCards } });
+  }
+
+  // ── Spell It (words from tags) ────────────────────────────────────────────
+  const spellWords = tags.slice(0, 6)
+    .filter(t => t.length >= 2 && t.length <= 8)
+    .map(t => ({ word: t, emoji: tagEmoji(t), hint: `Starts with "${t[0].toUpperCase()}"` }));
+  if (spellWords.length >= 2) activities.push({ type: 'spell', title: `✍️ ${title} — Spell It`, content: { spellWords } });
+
   return activities;
 }
 

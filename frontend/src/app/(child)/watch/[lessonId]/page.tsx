@@ -237,6 +237,186 @@ function MatchingGame({ activity, onDone }: { activity: Activity; onDone: () => 
   );
 }
 
+function MemoryGame({ activity, onDone }: { activity: Activity; onDone: () => void }) {
+  const rawCards = activity.content.memoryCards ?? [];
+  // Fallback: build memory cards from pairs if memoryCards not present
+  const pairs = activity.content.pairs ?? [];
+  const cards = rawCards.length ? rawCards : [
+    ...pairs.map((p, i) => ({ id: `w${i}`, emoji: p.emoji, pairId: String(i) })),
+    ...pairs.map((p, i) => ({ id: `e${i}`, emoji: p.emoji, pairId: String(i) })),
+  ].sort(() => Math.random() - 0.5);
+
+  const [flipped, setFlipped] = useState<string[]>([]);
+  const [matched, setMatched] = useState<Set<string>>(new Set());
+  const [disabled, setDisabled] = useState(false);
+  const [moves, setMoves] = useState(0);
+
+  function flip(id: string) {
+    if (disabled || flipped.includes(id) || matched.has(id)) return;
+    const next = [...flipped, id];
+    setFlipped(next);
+    if (next.length === 2) {
+      setMoves(m => m + 1);
+      setDisabled(true);
+      const [a, b] = next.map(cid => cards.find(c => c.id === cid)!);
+      if (a.pairId === b.pairId) {
+        const nm = new Set([...matched, a.id, b.id]);
+        setMatched(nm);
+        setFlipped([]);
+        setDisabled(false);
+        if (nm.size === cards.length) setTimeout(onDone, 600);
+      } else {
+        setTimeout(() => { setFlipped([]); setDisabled(false); }, 1000);
+      }
+    }
+  }
+
+  const cols = cards.length <= 6 ? 3 : cards.length <= 8 ? 4 : 4;
+
+  return (
+    <div className="py-6 px-4 max-w-md mx-auto">
+      <p className="text-center text-sm text-gray-400 font-semibold mb-4">Flip cards to find matching pairs · {moves} moves</p>
+      <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+        {cards.map(card => {
+          const isFlipped = flipped.includes(card.id) || matched.has(card.id);
+          const isMatched = matched.has(card.id);
+          return (
+            <button key={card.id} onClick={() => flip(card.id)}
+              className="aspect-square rounded-2xl text-3xl flex items-center justify-center font-bold transition-all duration-300"
+              style={{
+                background: isMatched ? '#dcfce7' : isFlipped ? '#fff' : 'linear-gradient(135deg,#7C3AED,#06B6D4)',
+                border: isMatched ? '2px solid #86efac' : isFlipped ? '2px solid #e5e7eb' : 'none',
+                transform: isFlipped ? 'rotateY(0deg)' : 'rotateY(180deg)',
+                color: isFlipped ? 'inherit' : 'transparent',
+                boxShadow: isMatched ? '0 4px 12px rgba(134,239,172,0.4)' : '0 2px 8px rgba(0,0,0,0.1)',
+              }}>
+              {isFlipped ? card.emoji : '?'}
+            </button>
+          );
+        })}
+      </div>
+      {matched.size === cards.length && (
+        <div className="text-center mt-6">
+          <div className="text-5xl mb-2">🧠</div>
+          <p className="text-xl font-bold text-gray-800">All pairs found in {moves} moves!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SpellGame({ activity, onDone }: { activity: Activity; onDone: () => void }) {
+  const spellWords = activity.content.spellWords ?? [];
+  // Fallback: use tags/pairs
+  const pairs = activity.content.pairs ?? [];
+  const words = spellWords.length
+    ? spellWords
+    : pairs.slice(0, 5).map(p => ({ word: p.word, emoji: p.emoji }));
+
+  const [idx, setIdx] = useState(0);
+  const [letters, setLetters] = useState<string[]>([]);
+  const [shuffled, setShuffled] = useState<string[]>([]);
+  const [wrong, setWrong] = useState(false);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!words[idx]) return;
+    const w = words[idx].word.toUpperCase();
+    setLetters([]);
+    setShuffled([...w.split('')].sort(() => Math.random() - 0.5));
+  }, [idx, words]);
+
+  function addLetter(l: string, li: number) {
+    const next = [...letters, l];
+    setLetters(next);
+    const remaining = [...shuffled];
+    remaining.splice(li, 1);
+    setShuffled(remaining);
+    const target = words[idx].word.toUpperCase();
+    if (next.length === target.length) {
+      if (next.join('') === target) {
+        setScore(s => s + 1);
+        setTimeout(() => {
+          if (idx < words.length - 1) setIdx(i => i + 1);
+          else setDone(true);
+        }, 800);
+      } else {
+        setWrong(true);
+        setTimeout(() => {
+          const w = words[idx].word.toUpperCase();
+          setLetters([]);
+          setShuffled([...w.split('')].sort(() => Math.random() - 0.5));
+          setWrong(false);
+        }, 800);
+      }
+    }
+  }
+
+  function removeLetter(li: number) {
+    const l = letters[li];
+    const next = [...letters]; next.splice(li, 1);
+    setLetters(next);
+    setShuffled(s => [...s, l]);
+  }
+
+  if (!words.length) return <div className="text-center py-12 text-gray-400">No words to spell yet.</div>;
+  if (done) return (
+    <div className="text-center py-12">
+      <div className="text-6xl mb-3">✍️</div>
+      <p className="text-2xl font-black text-gray-800 mb-1">Spelling master!</p>
+      <p className="text-gray-500 mb-6">{score} of {words.length} words correct</p>
+      <button onClick={() => { setIdx(0); setScore(0); setDone(false); }} className="px-8 py-3 bg-pink-500 text-white rounded-2xl font-bold mr-3">Again</button>
+      <button onClick={onDone} className="px-8 py-3 bg-green-500 text-white rounded-2xl font-bold">Done ✓</button>
+    </div>
+  );
+
+  const current = words[idx];
+  const target = current.word.toUpperCase();
+
+  return (
+    <div className="py-6 px-4 max-w-md mx-auto">
+      <div className="flex justify-between text-xs text-gray-400 font-semibold mb-4">
+        <span>Word {idx + 1} of {words.length}</span>
+        <span>{score} correct ✓</span>
+      </div>
+
+      <div className="text-center mb-6">
+        <div className="text-6xl mb-2">{current.emoji}</div>
+        <p className="text-gray-500 text-sm">{current.word ? `Spell the word!` : ''}</p>
+      </div>
+
+      {/* Answer boxes */}
+      <div className="flex justify-center gap-2 mb-6">
+        {target.split('').map((_, i) => (
+          <button key={i} onClick={() => i < letters.length && removeLetter(i)}
+            className={`w-11 h-11 rounded-xl border-2 font-black text-lg flex items-center justify-center transition-all ${
+              letters[i]
+                ? wrong ? 'bg-red-100 border-red-400 text-red-600' : 'bg-orange-50 border-orange-300 text-orange-600'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+            {letters[i] || ''}
+          </button>
+        ))}
+      </div>
+
+      {/* Shuffled letter buttons */}
+      <div className="flex justify-center flex-wrap gap-2">
+        {shuffled.map((l, i) => (
+          <button key={i} onClick={() => addLetter(l, i)}
+            className="w-11 h-11 rounded-xl bg-white border-2 border-purple-200 font-black text-lg text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all">
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {letters.join('') === target && (
+        <div className="text-center mt-4 text-green-600 font-black text-lg animate-bounce">✅ Correct!</div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function ActivityHubContent() {
@@ -280,20 +460,33 @@ function ActivityHubContent() {
 
   const colors = getGradeColor(lesson.grade);
   const currentActivity = activities.find(a => a.type === activeTab);
-  const tabOrder: ActivityType[] = ['story', 'flashcard', 'quiz', 'matching', 'phonics', 'fill_blank'];
+  const tabOrder: ActivityType[] = ['story', 'flashcard', 'quiz', 'matching', 'memory', 'spell', 'phonics', 'fill_blank'];
   const availableTabs = tabOrder.filter(t => activities.some(a => a.type === t));
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* XP Toast */}
       {xpToast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-400 text-gray-900 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-          <span className="text-2xl">⭐</span>
-          <div>
-            <p className="font-black text-sm">+{xpToast.xp} XP • +{xpToast.coins} Coins!</p>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"
+          style={{ animation: 'slideDown 0.4s ease-out' }}>
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+            <span className="text-2xl">⭐</span>
+            <div>
+              <p className="font-black text-sm">+{xpToast.xp} XP earned!</p>
+              <p className="text-xs text-yellow-100">+{xpToast.coins} coins 🪙</p>
+            </div>
           </div>
+          {/* Confetti dots */}
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="absolute w-2 h-2 rounded-full"
+              style={{ backgroundColor: ['#FF6B9D','#7C3AED','#06B6D4','#F59E0B','#10B981','#EF4444'][i], top: 0, left: `${20 + i * 12}%`, animation: `confettiPop 0.8s ease-out ${i * 0.08}s both` }} />
+          ))}
         </div>
       )}
+      <style jsx>{`
+        @keyframes slideDown { from { transform: translate(-50%,-40px); opacity:0; } to { transform: translate(-50%,0); opacity:1; } }
+        @keyframes confettiPop { 0%{transform:translateY(0) scale(0);opacity:1} 100%{transform:translateY(-60px) scale(1.5);opacity:0} }
+      `}</style>
 
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
@@ -335,6 +528,10 @@ function ActivityHubContent() {
           <QuizGame activity={currentActivity} childId={childId} colors={colors} onDone={(s) => handleActivityDone(Math.round(currentActivity.xpReward * s / 100), Math.round(currentActivity.coinsReward * s / 100))} />
         ) : currentActivity.type === 'matching' ? (
           <MatchingGame activity={currentActivity} onDone={() => handleActivityDone(currentActivity.xpReward, currentActivity.coinsReward)} />
+        ) : currentActivity.type === 'memory' ? (
+          <MemoryGame activity={currentActivity} onDone={() => handleActivityDone(currentActivity.xpReward, currentActivity.coinsReward)} />
+        ) : currentActivity.type === 'spell' ? (
+          <SpellGame activity={currentActivity} onDone={() => handleActivityDone(currentActivity.xpReward, currentActivity.coinsReward)} />
         ) : (
           <div className="text-center py-20 text-gray-400">Activity type coming soon!</div>
         )}

@@ -26,11 +26,23 @@ const storyPageSchema = new mongoose.Schema({
   bg: String,
 }, { _id: false });
 
+const memoryCardSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  emoji: { type: String, required: true },
+  pairId: { type: String, required: true },
+}, { _id: false });
+
+const spellWordSchema = new mongoose.Schema({
+  word: { type: String, required: true },
+  emoji: String,
+  hint: String,
+}, { _id: false });
+
 const activitySchema = new mongoose.Schema({
   lesson: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', required: true },
   type: {
     type: String,
-    enum: ['quiz', 'flashcard', 'story', 'matching', 'phonics', 'fill_blank'],
+    enum: ['quiz', 'flashcard', 'story', 'matching', 'phonics', 'fill_blank', 'memory', 'spell'],
     required: true,
   },
   title: String,
@@ -45,7 +57,9 @@ const activitySchema = new mongoose.Schema({
     cards:      [flashcardSchema],  // flashcard
     pairs:      [matchPairSchema],  // matching
     pages:      [storyPageSchema],  // story
-    words:      [String],           // phonics / fill_blank
+    words:       [String],           // phonics / fill_blank
+    memoryCards: [memoryCardSchema], // memory
+    spellWords:  [spellWordSchema],  // spell
   },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

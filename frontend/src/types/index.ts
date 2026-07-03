@@ -6,7 +6,7 @@ export type VideoFormat =
   | 'emotion_song' | 'original_song' | 'recap_song' | 'celebration_video' | 'themed_compilation';
 
 export type LessonStatus = 'draft' | 'generating' | 'ready' | 'published' | 'archived';
-export type ActivityType = 'quiz' | 'flashcard' | 'story' | 'matching' | 'phonics' | 'fill_blank';
+export type ActivityType = 'quiz' | 'flashcard' | 'story' | 'matching' | 'phonics' | 'fill_blank' | 'memory' | 'spell';
 export type AchievementType = 'badge' | 'trophy' | 'certificate';
 
 export interface Subject {
@@ -45,12 +45,20 @@ export interface MatchPair {
 export interface StoryPage {
   text: string; emoji?: string; bg?: string;
 }
+export interface MemoryCard {
+  id: string; emoji: string; pairId: string;
+}
+export interface SpellWord {
+  word: string; emoji: string; hint?: string;
+}
 export interface ActivityContent {
   questions?: QuizQuestion[];
   cards?: Flashcard[];
   pairs?: MatchPair[];
   pages?: StoryPage[];
   words?: string[];
+  memoryCards?: MemoryCard[];
+  spellWords?: SpellWord[];
 }
 export interface Activity {
   _id: string; lesson: string; type: ActivityType; title?: string;
@@ -108,8 +116,8 @@ export const VIDEO_FORMAT_ICONS: Record<VideoFormat, string> = {
 };
 
 export const ACTIVITY_ICONS: Record<ActivityType, string> = {
-  quiz: '❓', flashcard: '🃏', story: '📖', matching: '🎯', phonics: '🔤', fill_blank: '✏️',
+  quiz: '❓', flashcard: '🃏', story: '📖', matching: '🎯', phonics: '🔤', fill_blank: '✏️', memory: '🧠', spell: '✍️',
 };
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
-  quiz: 'Quiz', flashcard: 'Flashcards', story: 'Story', matching: 'Match It', phonics: 'Phonics', fill_blank: 'Fill in the Blank',
+  quiz: 'Quiz', flashcard: 'Flashcards', story: 'Story', matching: 'Match It', phonics: 'Phonics', fill_blank: 'Fill in Blank', memory: 'Memory', spell: 'Spell It',
 };
