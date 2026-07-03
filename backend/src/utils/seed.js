@@ -142,7 +142,7 @@ async function seed() {
   const founderUser = await User.create({
     name: 'LittleLearners Founder',
     email: 'selvaganapathims007@gmail.com',
-    password: 'FounderPass2024!',
+    password: 'selvaganapathi',
     role: 'founder',
   });
   console.log('✓ Founder user created');
