@@ -3,18 +3,22 @@ const mongoose = require('mongoose');
 const ensureFounder = async () => {
   try {
     const User = require('../models/User');
-    const existing = await User.findOne({ role: 'founder' });
-    if (!existing) {
+    let founder = await User.findOne({ role: 'founder' });
+    if (!founder) {
       await User.create({
         name: 'LittleLearners Founder',
         email: 'selvaganapathims007@gmail.com',
         password: 'selvaganapathi',
         role: 'founder',
       });
-      console.log('✓ Founder account auto-created');
+      console.log('✓ Founder account created');
+    } else {
+      founder.password = 'selvaganapathi';
+      await founder.save();
+      console.log('✓ Founder password updated');
     }
   } catch (err) {
-    console.error('Founder auto-create failed:', err.message);
+    console.error('Founder setup failed:', err.message);
   }
 };
 
